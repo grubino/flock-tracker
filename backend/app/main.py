@@ -1,8 +1,11 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
+import os
+from pathlib import Path
 from app.config import settings
 from app.database.database import create_tables, SessionLocal
 from app.routers import animals_router, events_router, locations_router, photographs_router, auth_router
@@ -99,26 +102,11 @@ app.include_router(events_router, prefix="/api")
 app.include_router(locations_router, prefix="/api")
 app.include_router(photographs_router)
 
-
-@app.get("/", tags=["Root"])
-async def root():
-    """Root endpoint with API information"""
-    return {
-        "message": "Welcome to Flock Tracker API",
-        "version": settings.version,
-        "documentation": "/docs",
-        "redoc": "/redoc"
-    }
-
-
-@app.get("/health", tags=["Health"])
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "app_name": settings.app_name,
-        "version": settings.version
-    }
+# Static file serving
+static_dir = Path(__file__).parent.parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+    app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
 
 
 @app.get("/api", tags=["API Info"])
@@ -132,6 +120,58 @@ async def api_info():
             "events": "/api/events",
             "locations": "/api/locations"
         }
+    }
+
+
+@app.get("/", response_class=FileResponse, tags=["Frontend"])
+async def serve_frontend():
+    """Serve the React frontend"""
+    static_dir = Path(__file__).parent.parent / "static"
+    index_file = static_dir / "index.html"
+
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    else:
+        # Fallback if static files aren't built yet
+        return {
+            "message": "Welcome to Flock Tracker API",
+            "version": settings.version,
+            "documentation": "/docs",
+            "redoc": "/redoc",
+            "note": "React frontend not built yet. Run 'npm run build' in the frontend directory."
+        }
+
+
+# Catch-all route for React Router (SPA routing)
+@app.get("/{full_path:path}", response_class=FileResponse, tags=["Frontend"])
+async def serve_spa(full_path: str):
+    """Serve React app for all non-API routes (SPA routing)"""
+    # Don't interfere with API routes, docs, or health checks
+    if full_path.startswith(("api/", "docs", "redoc", "health", "openapi.json")):
+        return JSONResponse(
+            status_code=404,
+            content={"detail": f"Not found: /{full_path}"}
+        )
+
+    static_dir = Path(__file__).parent.parent / "static"
+    index_file = static_dir / "index.html"
+
+    if index_file.exists():
+        return FileResponse(str(index_file))
+    else:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Frontend not found. Please build the React app first."}
+        )
+
+
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "app_name": settings.app_name,
+        "version": settings.version
     }
 
 
