@@ -9,7 +9,7 @@ from app.models.animal import AnimalType
 router = APIRouter(prefix="/animals", tags=["animals"])
 
 
-@router.get("/", response_model=List[AnimalWithDetails])
+@router.get("", response_model=List[AnimalWithDetails])
 def read_animals(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
@@ -28,7 +28,7 @@ def read_animals(
     return animals
 
 
-@router.post("/", response_model=Animal)
+@router.post("", response_model=Animal)
 def create_animal(animal: AnimalCreate, db: Session = Depends(get_db)):
     """Create a new animal"""
     service = AnimalService(db)

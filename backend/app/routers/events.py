@@ -10,7 +10,7 @@ from app.models.event import EventType
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-@router.get("/", response_model=List[EventWithAnimal])
+@router.get("", response_model=List[EventWithAnimal])
 def read_events(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
@@ -33,7 +33,7 @@ def read_events(
     return events
 
 
-@router.post("/", response_model=Event)
+@router.post("", response_model=Event)
 def create_event(event: EventCreate, db: Session = Depends(get_db)):
     """Create a new event"""
     service = EventService(db)

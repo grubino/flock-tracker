@@ -153,8 +153,11 @@ async def serve_frontend():
 @app.get("/{full_path:path}", response_class=FileResponse, tags=["Frontend"])
 async def serve_spa(full_path: str):
     """Serve React app for all non-API routes (SPA routing)"""
-    # Don't interfere with API routes, docs, or health checks
-    if full_path.startswith(("api/", "docs", "redoc", "health", "openapi.json", "assets/")):
+    # Explicitly exclude API routes and system paths
+    excluded_paths = ("api", "docs", "redoc", "health", "openapi.json", "assets")
+
+    # Check if this is an API route or system path
+    if full_path.startswith(excluded_paths) or full_path in excluded_paths:
         return JSONResponse(
             status_code=404,
             content={"detail": f"Not found: /{full_path}"}

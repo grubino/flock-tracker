@@ -8,7 +8,7 @@ from app.services.location_service import LocationService
 router = APIRouter(prefix="/locations", tags=["locations"])
 
 
-@router.get("/", response_model=List[Location])
+@router.get("", response_model=List[Location])
 def read_locations(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
@@ -20,7 +20,7 @@ def read_locations(
     return locations
 
 
-@router.post("/", response_model=Location)
+@router.post("", response_model=Location)
 def create_location(location: LocationCreate, db: Session = Depends(get_db)):
     """Create a new location"""
     service = LocationService(db)
