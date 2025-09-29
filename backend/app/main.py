@@ -102,22 +102,7 @@ app.include_router(events_router, prefix="/api")
 app.include_router(locations_router, prefix="/api")
 app.include_router(photographs_router)
 
-@app.get("/health", tags=["Health"])
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "app_name": settings.app_name,
-        "version": settings.version
-    }
-
-# Static file serving
-static_dir = Path(__file__).parent.parent / "static"
-if static_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
-    app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
-
-
+# API and health endpoints (before static file mounting)
 @app.get("/api", tags=["API Info"])
 async def api_info():
     """API information endpoint"""
@@ -131,7 +116,21 @@ async def api_info():
         }
     }
 
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "app_name": settings.app_name,
+        "version": settings.version
+    }
 
+# Static file serving - mount after API routes but before catch-all
+static_dir = Path(__file__).parent.parent / "static"
+if static_dir.exists():
+    app.mount("/assets", StaticFiles(directory=str(static_dir / "assets")), name="assets")
+
+# Frontend routes
 @app.get("/", response_class=FileResponse, tags=["Frontend"])
 async def serve_frontend():
     """Serve the React frontend"""
@@ -150,13 +149,12 @@ async def serve_frontend():
             "note": "React frontend not built yet. Run 'npm run build' in the frontend directory."
         }
 
-
-# Catch-all route for React Router (SPA routing)
+# Catch-all route for React Router (SPA routing) - must be last
 @app.get("/{full_path:path}", response_class=FileResponse, tags=["Frontend"])
 async def serve_spa(full_path: str):
     """Serve React app for all non-API routes (SPA routing)"""
     # Don't interfere with API routes, docs, or health checks
-    if full_path.startswith(("api/", "docs", "redoc", "health", "openapi.json")):
+    if full_path.startswith(("api/", "docs", "redoc", "health", "openapi.json", "assets/")):
         return JSONResponse(
             status_code=404,
             content={"detail": f"Not found: /{full_path}"}
