@@ -102,6 +102,15 @@ app.include_router(events_router, prefix="/api")
 app.include_router(locations_router, prefix="/api")
 app.include_router(photographs_router)
 
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "app_name": settings.app_name,
+        "version": settings.version
+    }
+
 # Static file serving
 static_dir = Path(__file__).parent.parent / "static"
 if static_dir.exists():
@@ -163,16 +172,6 @@ async def serve_spa(full_path: str):
             status_code=404,
             content={"detail": "Frontend not found. Please build the React app first."}
         )
-
-
-@app.get("/health", tags=["Health"])
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "app_name": settings.app_name,
-        "version": settings.version
-    }
 
 
 if __name__ == "__main__":
