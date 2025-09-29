@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
-import { useAuth0 } from '@auth0/auth0-react';
 import {
   Card,
   Text,
@@ -127,7 +126,6 @@ export const Register: React.FC = () => {
   const styles = useStyles();
   const navigate = useNavigate();
   const { register, isLoading } = useAuth();
-  const { loginWithRedirect, isLoading: auth0Loading } = useAuth0();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -223,15 +221,8 @@ export const Register: React.FC = () => {
     setError('Google registration failed');
   };
 
-  const handleAuth0Register = () => {
-    loginWithRedirect({
-      authorizationParams: {
-        screen_hint: 'signup',
-      },
-    });
-  };
 
-  if (isLoading || auth0Loading) {
+  if (isLoading) {
     return (
       <div className={styles.container}>
         <div className={styles.loading}>
@@ -355,13 +346,6 @@ export const Register: React.FC = () => {
             />
           </div>
 
-          <Button
-            appearance="outline"
-            onClick={handleAuth0Register}
-            style={{ width: '100%' }}
-          >
-            Sign up with Auth0
-          </Button>
         </div>
 
         <div className={styles.footer}>
