@@ -1,0 +1,6 @@
+.claude/
+**/.env
+.venv/
+node_modules/
+**/*.db
+__pycache__/
