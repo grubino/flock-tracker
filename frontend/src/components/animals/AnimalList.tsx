@@ -68,7 +68,7 @@ const AnimalList: React.FC = () => {
     queryFn: () => animalsApi.getAll().then(res => res.data),
   });
 
-  const handleTabSelect = (event: any, data: any) => {
+  const handleTabSelect = (_event: any, data: any) => {
     setSelectedTab(data.value as string);
   };
 

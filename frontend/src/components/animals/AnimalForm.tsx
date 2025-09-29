@@ -269,9 +269,13 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
                 }
                 placeholder="Select Location"
               >
-                <Option value="">No Location</Option>
+                <Option value="" text="No Location">No Location</Option>
                 {locations?.map(location => (
-                  <Option key={location.id} value={location.id.toString()}>
+                  <Option
+                    key={location.id}
+                    value={location.id.toString()}
+                    text={`${location.name}${location.paddock_name ? ` - ${location.paddock_name}` : ''}`}
+                  >
                     {location.name}{location.paddock_name ? ` - ${location.paddock_name}` : ''}
                   </Option>
                 ))}

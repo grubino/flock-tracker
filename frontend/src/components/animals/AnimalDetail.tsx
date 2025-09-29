@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   Card,
-  CardHeader,
   Text,
   Button,
   Badge,

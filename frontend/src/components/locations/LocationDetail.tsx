@@ -15,7 +15,6 @@ import {
   ArrowLeft24Regular,
 } from '@fluentui/react-icons';
 import { locationsApi } from '../../services/api';
-import type { Location } from '../../types';
 
 const useStyles = makeStyles({
   container: {

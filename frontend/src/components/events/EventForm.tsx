@@ -134,9 +134,13 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
               }
               placeholder="Select an animal"
             >
-              <Option value="0">Select an animal</Option>
+              <Option value="0" text="Select an animal">Select an animal</Option>
               {animals?.map(animal => (
-                <Option key={animal.id} value={animal.id.toString()}>
+                <Option
+                  key={animal.id}
+                  value={animal.id.toString()}
+                  text={`${animal.name || animal.tag_number} (${animal.animal_type === 'sheep' && animal.sheep_gender ? `${animal.sheep_gender}` : animal.animal_type})`}
+                >
                   {animal.name || animal.tag_number} ({animal.animal_type === 'sheep' && animal.sheep_gender ? `${animal.sheep_gender}` : animal.animal_type})
                 </Option>
               ))}

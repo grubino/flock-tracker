@@ -1,27 +1,32 @@
-export enum AnimalType {
-  SHEEP = "sheep",
-  CHICKEN = "chicken",
-  HIVE = "hive"
-}
+export const AnimalType = {
+  SHEEP: "sheep",
+  CHICKEN: "chicken",
+  HIVE: "hive"
+} as const;
 
-export enum SheepGender {
-  EWE = "ewe",
-  RAM = "ram"
-}
+export const SheepGender = {
+  EWE: "ewe",
+  RAM: "ram"
+} as const;
 
-export enum ChickenGender {
-  HEN = "hen",
-  ROOSTER = "rooster"
-}
+export const ChickenGender = {
+  HEN: "hen",
+  ROOSTER: "rooster"
+} as const;
 
-export enum EventType {
-  DEWORMING = "deworming",
-  DELICING = "delicing",
-  LAMBING = "lambing",
-  VACCINATION = "vaccination",
-  HEALTH_CHECK = "health_check",
-  OTHER = "other"
-}
+export const EventType = {
+  DEWORMING: "deworming",
+  DELICING: "delicing",
+  LAMBING: "lambing",
+  VACCINATION: "vaccination",
+  HEALTH_CHECK: "health_check",
+  OTHER: "other"
+} as const;
+
+export type AnimalType = typeof AnimalType[keyof typeof AnimalType];
+export type SheepGender = typeof SheepGender[keyof typeof SheepGender];
+export type ChickenGender = typeof ChickenGender[keyof typeof ChickenGender];
+export type EventType = typeof EventType[keyof typeof EventType];
 
 export interface Animal {
   id: number;
@@ -57,6 +62,11 @@ export interface Location {
   address?: string;
   paddock_name?: string;
   description?: string;
+  area_size?: number;
+  area_unit?: string;
+  capacity?: number;
+  latitude?: number;
+  longitude?: number;
   created_at: string;
 }
 
