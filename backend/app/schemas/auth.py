@@ -1,12 +1,14 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
+from app.models.user import UserRole
 
 
 class UserBase(BaseModel):
     email: EmailStr
     name: str
     picture: Optional[str] = None
+    role: UserRole = UserRole.customer
 
 
 class UserCreate(UserBase):
@@ -37,6 +39,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     email: Optional[str] = None
+    role: Optional[UserRole] = None
 
 
 class AuthResponse(BaseModel):

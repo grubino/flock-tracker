@@ -29,13 +29,14 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
             db=db,
             email=user_data.email,
             name=user_data.name,
-            password=user_data.password
+            password=user_data.password,
+            role=user_data.role
         )
 
         # Create access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
-            data={"sub": user.email}, expires_delta=access_token_expires
+            data={"sub": user.email, "role": user.role.value}, expires_delta=access_token_expires
         )
 
         # Return user data and token
@@ -66,7 +67,7 @@ async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
 
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.role.value}, expires_delta=access_token_expires
     )
 
     return AuthResponse(
@@ -93,6 +94,6 @@ async def login_for_access_token(user_credentials: UserLogin, db: Session = Depe
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.role.value}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}

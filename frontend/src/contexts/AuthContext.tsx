@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
+export type UserRole = 'customer' | 'user' | 'admin';
+
 export interface User {
   id: string;
   email: string;
   name: string;
   picture?: string;
   provider: 'google' | 'auth0' | 'local';
+  role: UserRole;
 }
 
 export interface AuthContextType {
@@ -14,8 +17,10 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   login: (provider: 'google' | 'auth0') => void;
   logout: () => void;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string, role?: UserRole) => Promise<void>;
   loginWithCredentials: (email: string, password: string) => Promise<void>;
+  hasRole: (role: UserRole) => boolean;
+  hasMinRole: (minRole: UserRole) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,16 +81,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Auth0 will handle its own cleanup
   };
 
-  const register = async (email: string, password: string, name: string) => {
+  const register = async (email: string, password: string, name: string, role: UserRole = 'customer') => {
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call to your backend
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ email, password, name, role }),
       });
 
       if (!response.ok) {
@@ -98,6 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: data.user.email,
         name: data.user.name,
         provider: 'local',
+        role: data.user.role,
       };
 
       setUser(newUser);
@@ -114,7 +119,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithCredentials = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // TODO: Replace with actual API call to your backend
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -133,6 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: data.user.email,
         name: data.user.name,
         provider: 'local',
+        role: data.user.role,
       };
 
       setUser(loggedInUser);
@@ -146,6 +151,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Role checking functions
+  const hasRole = (role: UserRole): boolean => {
+    return user?.role === role || user?.role === 'admin';
+  };
+
+  const hasMinRole = (minRole: UserRole): boolean => {
+    if (!user) return false;
+
+    const roleHierarchy: Record<UserRole, number> = {
+      customer: 0,
+      user: 1,
+      admin: 2,
+    };
+
+    return roleHierarchy[user.role] >= roleHierarchy[minRole];
+  };
+
 
   const value: AuthContextType = {
     user,
@@ -155,6 +177,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     register,
     loginWithCredentials,
+    hasRole,
+    hasMinRole,
   };
 
   return (

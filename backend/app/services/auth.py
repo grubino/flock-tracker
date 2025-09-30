@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.schemas.auth import TokenData
 
 # Password hashing
@@ -51,9 +51,18 @@ def verify_token(token: str, credentials_exception):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
+        role_str: str = payload.get("role")
         if email is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
+
+        role = None
+        if role_str:
+            try:
+                role = UserRole(role_str)
+            except ValueError:
+                role = UserRole.customer  # Default fallback
+
+        token_data = TokenData(email=email, role=role)
     except JWTError:
         raise credentials_exception
     return token_data
@@ -76,7 +85,7 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     return user
 
 
-def create_user(db: Session, email: str, name: str, password: str) -> User:
+def create_user(db: Session, email: str, name: str, password: str, role: UserRole = UserRole.customer) -> User:
     """Create a new user with email and password"""
     # Check if user already exists
     existing_user = get_user_by_email(db, email)
@@ -93,6 +102,7 @@ def create_user(db: Session, email: str, name: str, password: str) -> User:
         name=name,
         hashed_password=hashed_password,
         provider="local",
+        role=role,
         is_active=True,
         is_verified=False
     )
@@ -104,7 +114,7 @@ def create_user(db: Session, email: str, name: str, password: str) -> User:
 
 def create_admin_user(db: Session, password: str) -> Optional[User]:
     """Create an admin user with username 'admin' if it doesn't exist"""
-    admin_email = "admin@flocktracker.local"
+    admin_email = "admin@flocktracker.com"
     admin_name = "Administrator"
 
     # Check if admin user already exists
@@ -120,6 +130,7 @@ def create_admin_user(db: Session, password: str) -> Optional[User]:
             name=admin_name,
             hashed_password=hashed_password,
             provider="local",
+            role=UserRole.admin,
             is_active=True,
             is_verified=True  # Admin is pre-verified
         )
@@ -155,3 +166,39 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user
+
+
+def require_role(required_role: UserRole):
+    """Dependency factory that creates a role-checking dependency"""
+    async def role_checker(current_user: User = Depends(get_current_active_user)) -> User:
+        if current_user.role != required_role and current_user.role != UserRole.admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied. Required role: {required_role.value}"
+            )
+        return current_user
+    return role_checker
+
+
+def require_min_role(min_role: UserRole):
+    """Dependency factory that creates a minimum role-checking dependency"""
+    role_hierarchy = {
+        UserRole.customer: 0,
+        UserRole.user: 1,
+        UserRole.admin: 2
+    }
+
+    async def min_role_checker(current_user: User = Depends(get_current_active_user)) -> User:
+        if role_hierarchy.get(current_user.role, 0) < role_hierarchy.get(min_role, 0):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied. Minimum required role: {min_role.value}"
+            )
+        return current_user
+    return min_role_checker
+
+
+# Common role dependencies
+require_admin = require_role(UserRole.admin)
+require_user = require_min_role(UserRole.user)
+require_admin_or_user = require_min_role(UserRole.user)

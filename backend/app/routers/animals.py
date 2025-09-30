@@ -5,6 +5,8 @@ from app.database.database import get_db
 from app.schemas import Animal, AnimalCreate, AnimalUpdate, AnimalWithDetails, AnimalWithLocation
 from app.services.animal_service import AnimalService
 from app.models.animal import AnimalType
+from app.services.auth import get_current_active_user, require_admin, require_user
+from app.models.user import User
 
 router = APIRouter(prefix="/animals", tags=["animals"])
 
@@ -15,7 +17,8 @@ def read_animals(
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
     animal_type: Optional[AnimalType] = Query(None, description="Filter by animal type"),
     location_id: Optional[int] = Query(None, description="Filter by current location"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get all animals with optional filtering"""
     service = AnimalService(db)
@@ -29,7 +32,11 @@ def read_animals(
 
 
 @router.post("", response_model=Animal)
-def create_animal(animal: AnimalCreate, db: Session = Depends(get_db)):
+def create_animal(
+    animal: AnimalCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
+):
     """Create a new animal"""
     service = AnimalService(db)
     return service.create_animal(animal)
@@ -75,7 +82,12 @@ def read_animal(animal_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{animal_id}", response_model=Animal)
-def update_animal(animal_id: int, animal: AnimalUpdate, db: Session = Depends(get_db)):
+def update_animal(
+    animal_id: int,
+    animal: AnimalUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
+):
     """Update an existing animal"""
     service = AnimalService(db)
     updated_animal = service.update_animal(animal_id, animal)
@@ -85,7 +97,11 @@ def update_animal(animal_id: int, animal: AnimalUpdate, db: Session = Depends(ge
 
 
 @router.delete("/{animal_id}")
-def delete_animal(animal_id: int, db: Session = Depends(get_db)):
+def delete_animal(
+    animal_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
     """Delete an animal"""
     service = AnimalService(db)
     success = service.delete_animal(animal_id)
@@ -111,7 +127,8 @@ def get_animal_offspring(animal_id: int, db: Session = Depends(get_db)):
 def move_animal_to_location(
     animal_id: int,
     location_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
 ):
     """Move an animal to a new location"""
     service = AnimalService(db)

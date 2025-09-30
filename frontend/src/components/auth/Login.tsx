@@ -148,6 +148,7 @@ export const Login: React.FC = () => {
         name: decoded.name,
         picture: decoded.picture,
         provider: 'google',
+        role: 'customer', // Default role for OAuth users
       };
 
       // TODO: Replace with actual backend call

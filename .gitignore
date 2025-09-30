@@ -4,3 +4,5 @@
 node_modules/
 **/*.db
 __pycache__/
+**/.env.staging
+**/.env.dev

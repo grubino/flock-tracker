@@ -1,6 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Enum as SQLEnum
 from sqlalchemy.sql import func
+from enum import Enum
 from app.database.database import Base
+
+
+class UserRole(str, Enum):
+    customer = "customer"
+    user = "user"
+    admin = "admin"
 
 
 class User(Base):
@@ -13,6 +20,7 @@ class User(Base):
     picture = Column(String, nullable=True)
     provider = Column(String, default="local")  # local, google, auth0
     provider_id = Column(String, nullable=True)  # ID from OAuth provider
+    role = Column(SQLEnum(UserRole), default=UserRole.customer, nullable=False)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -6,6 +6,8 @@ from app.database.database import get_db
 from app.schemas import Event, EventCreate, EventUpdate, EventWithAnimal
 from app.services.event_service import EventService
 from app.models.event import EventType
+from app.services.auth import get_current_active_user, require_admin, require_user
+from app.models.user import User
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -18,7 +20,8 @@ def read_events(
     event_type: Optional[EventType] = Query(None, description="Filter by event type"),
     start_date: Optional[date] = Query(None, description="Filter events from this date"),
     end_date: Optional[date] = Query(None, description="Filter events until this date"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """Get all events with optional filtering"""
     service = EventService(db)
@@ -34,7 +37,11 @@ def read_events(
 
 
 @router.post("", response_model=Event)
-def create_event(event: EventCreate, db: Session = Depends(get_db)):
+def create_event(
+    event: EventCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
+):
     """Create a new event"""
     service = EventService(db)
     return service.create_event(event)
@@ -89,7 +96,12 @@ def read_event(event_id: int, db: Session = Depends(get_db)):
 
 
 @router.put("/{event_id}", response_model=Event)
-def update_event(event_id: int, event: EventUpdate, db: Session = Depends(get_db)):
+def update_event(
+    event_id: int,
+    event: EventUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
+):
     """Update an existing event"""
     service = EventService(db)
     updated_event = service.update_event(event_id, event)
@@ -99,7 +111,11 @@ def update_event(event_id: int, event: EventUpdate, db: Session = Depends(get_db
 
 
 @router.delete("/{event_id}")
-def delete_event(event_id: int, db: Session = Depends(get_db)):
+def delete_event(
+    event_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin)
+):
     """Delete an event"""
     service = EventService(db)
     success = service.delete_event(event_id)
