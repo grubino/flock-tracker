@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from app.config import settings
 from app.database.database import create_tables, SessionLocal
-from app.routers import animals_router, events_router, locations_router, photographs_router, auth_router
+from app.routers import animals_router, events_router, locations_router, photographs_router, auth_router, admin_router
 from app.models import User  # Import User model to ensure it's registered with SQLAlchemy
 from app.services.auth import create_admin_user
 
@@ -97,6 +97,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(auth_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 app.include_router(animals_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
 app.include_router(locations_router, prefix="/api")

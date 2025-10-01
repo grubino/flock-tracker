@@ -1,0 +1,233 @@
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  Card,
+  CardHeader,
+  Text,
+  Badge,
+  makeStyles,
+  tokens,
+  Spinner,
+  TabList,
+  Tab,
+  Input,
+  Button
+} from '@fluentui/react-components';
+import { Search20Regular, Dismiss20Regular } from '@fluentui/react-icons';
+import { animalsApi } from '../../services/api';
+import { AnimalType } from '../../types';
+import type { Animal } from '../../types';
+
+const useStyles = makeStyles({
+  container: {
+    padding: tokens.spacingVerticalXL,
+  },
+  header: {
+    marginBottom: tokens.spacingVerticalL,
+  },
+  searchContainer: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalM,
+    marginBottom: tokens.spacingVerticalL,
+    maxWidth: '600px',
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+    gap: tokens.spacingVerticalL,
+  },
+  card: {
+    padding: tokens.spacingVerticalL,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: tokens.shadow16,
+    },
+  },
+  cardDetails: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalS,
+    marginTop: tokens.spacingVerticalM,
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: tokens.spacingVerticalXXL,
+  },
+  loadingContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: tokens.spacingVerticalXXL,
+  },
+});
+
+const CustomerDashboard: React.FC = () => {
+  const styles = useStyles();
+  const [selectedTab, setSelectedTab] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const { data: animals, isLoading, error } = useQuery({
+    queryKey: ['animals'],
+    queryFn: () => animalsApi.getAll().then(res => res.data),
+  });
+
+  const handleTabSelect = (_event: any, data: any) => {
+    setSelectedTab(data.value as string);
+  };
+
+  const filteredAnimals = animals?.filter((animal: Animal) => {
+    // Filter by type
+    if (selectedTab !== 'all' && animal.animal_type !== selectedTab) {
+      return false;
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        animal.name?.toLowerCase().includes(query) ||
+        animal.tag_number?.toLowerCase().includes(query) ||
+        animal.current_location?.name?.toLowerCase().includes(query) ||
+        animal.current_location?.paddock_name?.toLowerCase().includes(query)
+      );
+    }
+
+    return true;
+  });
+
+  if (isLoading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <Spinner size="large" label="Loading animals..." />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.loadingContainer}>
+        <Text style={{ color: tokens.colorPaletteRedForeground1 }}>Error loading animals</Text>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <div>
+          <Text as="h1" size={800} weight="bold" style={{ marginBottom: tokens.spacingVerticalM }}>
+            Animal Catalog
+          </Text>
+        </div>
+        <div>
+          <Text size={400} style={{ color: tokens.colorNeutralForeground2 }}>
+            Browse and search through our collection of farm animals
+          </Text>
+        </div>
+      </div>
+      <div className={styles.searchContainer}>
+        <Input
+          placeholder="Search by name, tag, or location..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          contentBefore={<Search20Regular />}
+          contentAfter={
+            searchQuery && (
+              <Button
+                appearance="subtle"
+                icon={<Dismiss20Regular />}
+                size="small"
+                onClick={() => setSearchQuery('')}
+              />
+            )
+          }
+          style={{ flex: 1 }}
+        />
+      </div>
+
+      <TabList selectedValue={selectedTab} onTabSelect={handleTabSelect} style={{ marginBottom: tokens.spacingVerticalL }}>
+        <Tab value="all">All Animals ({animals?.length || 0})</Tab>
+        <Tab value={AnimalType.SHEEP}>
+          Sheep ({animals?.filter(a => a.animal_type === AnimalType.SHEEP).length || 0})
+        </Tab>
+        <Tab value={AnimalType.CHICKEN}>
+          Chickens ({animals?.filter(a => a.animal_type === AnimalType.CHICKEN).length || 0})
+        </Tab>
+        <Tab value={AnimalType.HIVE}>
+          Hives ({animals?.filter(a => a.animal_type === AnimalType.HIVE).length || 0})
+        </Tab>
+      </TabList>
+
+      {filteredAnimals && filteredAnimals.length > 0 ? (
+        <div className={styles.grid}>
+          {filteredAnimals.map((animal: Animal) => (
+            <RouterLink
+              key={animal.id}
+              to={`/animals/${animal.id}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <Card className={styles.card}>
+                <CardHeader>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                    <Text size={500} weight="semibold">
+                      {animal.name || `Tag: ${animal.tag_number}`}
+                    </Text>
+                    <Badge appearance="filled" color="brand">
+                      {animal.animal_type === AnimalType.SHEEP && animal.sheep_gender
+                        ? `${animal.sheep_gender}`
+                        : animal.animal_type === AnimalType.CHICKEN && animal.chicken_gender
+                        ? `${animal.chicken_gender}`
+                        : animal.animal_type}
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <div className={styles.cardDetails}>
+                  <Text size={300}>
+                    <strong>Tag:</strong> {animal.tag_number}
+                  </Text>
+                  {animal.birth_date && (
+                    <Text size={300}>
+                      <strong>Birth Date:</strong> {new Date(animal.birth_date).toLocaleDateString()}
+                    </Text>
+                  )}
+                  {animal.sire && (
+                    <Text size={300}>
+                      <strong>Sire:</strong> {animal.sire.name || animal.sire.tag_number}
+                    </Text>
+                  )}
+                  {animal.dam && (
+                    <Text size={300}>
+                      <strong>Dam:</strong> {animal.dam.name || animal.dam.tag_number}
+                    </Text>
+                  )}
+                  {animal.current_location && (
+                    <Text size={300}>
+                      <strong>Location:</strong> {animal.current_location.name}
+                      {animal.current_location.paddock_name && ` - ${animal.current_location.paddock_name}`}
+                    </Text>
+                  )}
+                </div>
+              </Card>
+            </RouterLink>
+          ))}
+        </div>
+      ) : (
+        <div className={styles.emptyState}>
+          <Text size={400}>
+            {searchQuery
+              ? `No animals found matching "${searchQuery}"`
+              : selectedTab === 'all'
+              ? 'No animals available'
+              : `No ${selectedTab} found`}
+          </Text>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CustomerDashboard;

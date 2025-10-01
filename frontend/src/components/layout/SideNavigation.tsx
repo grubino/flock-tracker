@@ -14,7 +14,8 @@ import {
   Home20Regular,
   Dismiss20Regular,
   PersonAccounts20Regular,
-  SignOut20Regular
+  SignOut20Regular,
+  Settings20Regular
 } from '@fluentui/react-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -142,7 +143,17 @@ const SideNavigation: React.FC<SideNavigationProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
 
-  const navItems = [
+  // Navigation items for customers (read-only access)
+  const customerNavItems = [
+    {
+      path: '/',
+      label: 'Animals',
+      icon: <AnimalRabbit20Regular />,
+    },
+  ];
+
+  // Navigation items for users and admins (full access)
+  const standardNavItems = [
     {
       path: '/',
       label: 'Home',
@@ -162,6 +173,17 @@ const SideNavigation: React.FC<SideNavigationProps> = ({ isOpen, onClose }) => {
       path: '/locations',
       label: 'Locations',
       icon: <Location20Regular />,
+    },
+  ];
+
+  const navItems = user?.role === 'customer' ? customerNavItems : standardNavItems;
+
+  const adminNavItems = [
+    {
+      path: '/admin/users',
+      label: 'User Management',
+      icon: <Settings20Regular />,
+      requiresRole: 'admin' as const,
     },
   ];
 
@@ -210,6 +232,32 @@ const SideNavigation: React.FC<SideNavigationProps> = ({ isOpen, onClose }) => {
               </RouterLink>
             );
           })}
+
+          {user?.role === 'admin' && adminNavItems.length > 0 && (
+            <>
+              <div style={{ borderTop: '1px solid #e5e5e5', margin: '16px 0', paddingTop: '16px' }}>
+                <Text size={300} weight="semibold" style={{ paddingLeft: '16px', color: '#6b7280', display: 'block', marginBottom: '8px' }}>
+                  Admin
+                </Text>
+              </div>
+              {adminNavItems.map((item) => {
+                const isActive = location.pathname === item.path ||
+                               location.pathname.startsWith(item.path);
+
+                return (
+                  <RouterLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={handleNavClick}
+                    className={`${styles.navItem} ${isActive ? styles.navItemActive : ''}`}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </RouterLink>
+                );
+              })}
+            </>
+          )}
         </div>
 
         <div className={styles.userSection}>

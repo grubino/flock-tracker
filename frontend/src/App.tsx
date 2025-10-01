@@ -17,6 +17,10 @@ import LocationList from './components/locations/LocationList';
 import LocationDetail from './components/locations/LocationDetail';
 import LocationForm from './components/locations/LocationForm';
 import ProfileView from './components/profile/ProfileView';
+import UserManagement from './components/admin/UserManagement';
+import CustomerDashboard from './components/customer/CustomerDashboard';
+import { RoleGuard } from './components/auth/RoleGuard';
+import { useAuth } from './contexts/AuthContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +32,14 @@ const queryClient = new QueryClient({
 });
 
 const HomePage: React.FC = () => {
+  const { user } = useAuth();
+
+  // Customer users see the animal catalog directly
+  if (user?.role === 'customer') {
+    return <CustomerDashboard />;
+  }
+
+  // Users and admins see the full dashboard
   return (
     <div style={{ textAlign: 'center', padding: '32px' }}>
       <Text as="h1" size={900} weight="bold" style={{ marginBottom: '24px', display: 'block' }}>
@@ -105,16 +117,20 @@ function App() {
                   } />
                   <Route path="/animals" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <AnimalList />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <AnimalList />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/animals/new" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <AnimalForm />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <AnimalForm />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/animals/:id" element={
@@ -126,58 +142,74 @@ function App() {
                   } />
                   <Route path="/animals/:id/edit" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <AnimalForm isEdit />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <AnimalForm isEdit />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/events" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <EventList />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <EventList />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/events/new" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <EventForm />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <EventForm />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/events/:id/edit" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <EventForm isEdit />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <EventForm isEdit />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/locations" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <LocationList />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <LocationList />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/locations/new" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <LocationForm />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <LocationForm />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/locations/:id" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <LocationDetail />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <LocationDetail />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/locations/:id/edit" element={
                     <ProtectedRoute>
-                      <Layout>
-                        <LocationForm isEdit />
-                      </Layout>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <LocationForm isEdit />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/profile" element={
@@ -185,6 +217,15 @@ function App() {
                       <Layout>
                         <ProfileView />
                       </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin/users" element={
+                    <ProtectedRoute>
+                      <RoleGuard requiredRole="admin">
+                        <Layout>
+                          <UserManagement />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="*" element={<Navigate to="/" replace />} />
