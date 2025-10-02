@@ -11,7 +11,6 @@ import {
   Card,
   Text,
   Dialog,
-  DialogTrigger,
   DialogSurface,
   DialogTitle,
   DialogBody,

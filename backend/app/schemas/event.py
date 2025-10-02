@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from app.models.event import EventType
 
@@ -21,6 +21,11 @@ class EventBase(BaseModel):
 class EventCreate(EventBase):
     """Schema for creating a new event"""
     pass
+
+
+class EventBulkCreate(BaseModel):
+    """Schema for creating multiple events at once"""
+    events: List[EventCreate] = Field(..., description="List of events to create")
 
 
 class EventUpdate(BaseModel):

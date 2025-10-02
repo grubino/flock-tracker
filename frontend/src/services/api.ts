@@ -55,6 +55,7 @@ export const eventsApi = {
   getById: (id: number) => api.get<Event>(`/api/events/${id}`),
   getByAnimal: (animalId: number) => api.get<Event[]>(`/api/events/animal/${animalId}`),
   create: (event: EventCreateRequest) => api.post<Event>('/api/events', event),
+  createBulk: (events: EventCreateRequest[]) => api.post<Event[]>('/api/events/bulk', { events }),
   update: (id: number, event: Partial<EventCreateRequest>) => api.put<Event>(`/api/events/${id}`, event),
   delete: (id: number) => api.delete(`/api/events/${id}`),
 };

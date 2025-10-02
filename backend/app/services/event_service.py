@@ -4,7 +4,7 @@ from typing import List, Optional
 from datetime import datetime, date, timedelta
 from fastapi import HTTPException
 from app.models import Event, EventType, Animal
-from app.schemas import EventCreate, EventUpdate
+from app.schemas import EventCreate, EventUpdate, EventBulkCreate
 
 
 class EventService:
@@ -93,6 +93,44 @@ class EventService:
         except IntegrityError as e:
             self.db.rollback()
             raise HTTPException(status_code=400, detail="Database integrity error")
+
+    def create_bulk_events(self, bulk_create: EventBulkCreate) -> List[Event]:
+        """Create multiple events at once"""
+        try:
+            created_events = []
+
+            # Validate all animal IDs exist before creating any events
+            animal_ids = set(event.animal_id for event in bulk_create.events)
+            animals = self.db.query(Animal).filter(Animal.id.in_(animal_ids)).all()
+            existing_animal_ids = {animal.id for animal in animals}
+
+            for event in bulk_create.events:
+                if event.animal_id not in existing_animal_ids:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Animal with ID {event.animal_id} not found"
+                    )
+
+            # Create all events
+            for event in bulk_create.events:
+                db_event = Event(**event.model_dump())
+                self.db.add(db_event)
+                created_events.append(db_event)
+
+            self.db.commit()
+
+            # Refresh all events to get their IDs
+            for db_event in created_events:
+                self.db.refresh(db_event)
+
+            return created_events
+
+        except IntegrityError as e:
+            self.db.rollback()
+            raise HTTPException(status_code=400, detail="Database integrity error")
+        except HTTPException:
+            self.db.rollback()
+            raise
 
     def update_event(self, event_id: int, event: EventUpdate) -> Optional[Event]:
         """Update an existing event"""

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -48,6 +48,17 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
     marginTop: tokens.spacingVerticalL,
   },
+  infoText: {
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+    marginTop: tokens.spacingVerticalXS,
+  },
+  bulkInfo: {
+    padding: tokens.spacingVerticalM,
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: tokens.borderRadiusMedium,
+    marginBottom: tokens.spacingVerticalM,
+  },
 });
 
 const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
@@ -57,13 +68,17 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
   const [searchParams] = useSearchParams();
   const preselectedAnimalId = searchParams.get('animal_id');
 
-  const [formData, setFormData] = useState<EventCreateRequest>({
-    animal_id: event?.animal_id || (preselectedAnimalId ? parseInt(preselectedAnimalId) : 0),
-    event_type: event?.event_type || EventType.HEALTH_CHECK,
-    event_date: event?.event_date ? event.event_date.split('T')[0] : new Date().toISOString().split('T')[0],
-    description: event?.description || '',
-    notes: event?.notes || '',
-  });
+  const [selectedAnimalIds, setSelectedAnimalIds] = useState<string[]>(
+    event?.animal_id ? [event.animal_id.toString()] : (preselectedAnimalId ? [preselectedAnimalId] : [])
+  );
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(
+    event?.event_type ? [event.event_type] : [EventType.HEALTH_CHECK]
+  );
+  const [eventDate, setEventDate] = useState(
+    event?.event_date ? event.event_date.split('T')[0] : new Date().toISOString().split('T')[0]
+  );
+  const [description, setDescription] = useState(event?.description || '');
+  const [notes, setNotes] = useState(event?.notes || '');
 
   const { data: animals } = useQuery({
     queryKey: ['animals'],
@@ -74,7 +89,14 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
     mutationFn: (data: EventCreateRequest) => eventsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      queryClient.invalidateQueries({ queryKey: ['events', formData.animal_id] });
+      navigate('/events');
+    },
+  });
+
+  const createBulkMutation = useMutation({
+    mutationFn: (data: EventCreateRequest[]) => eventsApi.createBulk(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
       navigate('/events');
     },
   });
@@ -84,36 +106,65 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
       eventsApi.update(event!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      queryClient.invalidateQueries({ queryKey: ['events', formData.animal_id] });
       navigate('/events');
     },
   });
 
+  // Calculate how many events will be created
+  const eventCount = useMemo(() => {
+    return selectedAnimalIds.length * selectedEventTypes.length;
+  }, [selectedAnimalIds, selectedEventTypes]);
+
+  const isBulkMode = eventCount > 1;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.animal_id === 0) {
-      alert('Please select an animal');
+
+    if (selectedAnimalIds.length === 0) {
+      alert('Please select at least one animal');
       return;
     }
 
-    const submitData = {
-      ...formData,
-      event_date: new Date(formData.event_date).toISOString(),
+    if (selectedEventTypes.length === 0) {
+      alert('Please select at least one event type');
+      return;
+    }
+
+    const baseEventData = {
+      event_date: new Date(eventDate).toISOString(),
+      description,
+      notes,
     };
 
-    if (isEdit) {
-      updateMutation.mutate(submitData);
-    } else {
-      createMutation.mutate(submitData);
-    }
-  };
+    if (isBulkMode && !isEdit) {
+      // Create an event for each combination of animal and event type
+      const events: EventCreateRequest[] = [];
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'animal_id' ? parseInt(value) : value,
-    }));
+      for (const animalId of selectedAnimalIds) {
+        for (const eventType of selectedEventTypes) {
+          events.push({
+            ...baseEventData,
+            animal_id: parseInt(animalId),
+            event_type: eventType as EventType,
+          });
+        }
+      }
+
+      createBulkMutation.mutate(events);
+    } else {
+      // Single event creation or edit
+      const submitData: EventCreateRequest = {
+        ...baseEventData,
+        animal_id: parseInt(selectedAnimalIds[0]),
+        event_type: selectedEventTypes[0] as EventType,
+      };
+
+      if (isEdit) {
+        updateMutation.mutate(submitData);
+      } else {
+        createMutation.mutate(submitData);
+      }
+    }
   };
 
   return (
@@ -124,17 +175,35 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
 
       <Card>
         <form onSubmit={handleSubmit} className={styles.form}>
+          {isBulkMode && !isEdit && (
+            <div className={styles.bulkInfo}>
+              <Text weight="semibold" style={{ display: 'block', marginBottom: tokens.spacingVerticalXS }}>
+                Bulk Event Creation
+              </Text>
+              <Text className={styles.infoText}>
+                {eventCount} event{eventCount !== 1 ? 's' : ''} will be created
+                ({selectedAnimalIds.length} animal{selectedAnimalIds.length !== 1 ? 's' : ''} × {selectedEventTypes.length} event type{selectedEventTypes.length !== 1 ? 's' : ''})
+              </Text>
+            </div>
+          )}
+
           <div className={styles.field}>
-            <Label htmlFor="animal_id" required>Animal</Label>
+            <Label htmlFor="animal_id" required>
+              Animal{!isEdit && 's'}
+            </Label>
             <Dropdown
-              value={formData.animal_id.toString()}
-              selectedOptions={[formData.animal_id.toString()]}
-              onOptionSelect={(_, data) =>
-                handleChange({ target: { name: 'animal_id', value: data.optionValue } } as any)
-              }
-              placeholder="Select an animal"
+              multiselect={!isEdit}
+              value={selectedAnimalIds.length > 0 ? selectedAnimalIds.join(', ') : ''}
+              selectedOptions={selectedAnimalIds}
+              onOptionSelect={(_, data) => {
+                if (isEdit) {
+                  setSelectedAnimalIds(data.selectedOptions);
+                } else {
+                  setSelectedAnimalIds(data.selectedOptions);
+                }
+              }}
+              placeholder="Select animal(s)"
             >
-              <Option value="0" text="Select an animal">Select an animal</Option>
               {animals?.map(animal => (
                 <Option
                   key={animal.id}
@@ -145,17 +214,25 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
                 </Option>
               ))}
             </Dropdown>
+            {!isEdit && (
+              <Text className={styles.infoText}>
+                Select multiple animals to create events for all of them
+              </Text>
+            )}
           </div>
 
           <div className={styles.formGrid}>
             <div className={styles.field}>
-              <Label htmlFor="event_type" required>Event Type</Label>
+              <Label htmlFor="event_type" required>
+                Event Type{!isEdit && 's'}
+              </Label>
               <Dropdown
-                value={formData.event_type}
-                selectedOptions={[formData.event_type]}
-                onOptionSelect={(_, data) =>
-                  handleChange({ target: { name: 'event_type', value: data.optionValue } } as any)
-                }
+                multiselect={!isEdit}
+                value={selectedEventTypes.join(', ')}
+                selectedOptions={selectedEventTypes}
+                onOptionSelect={(_, data) => {
+                  setSelectedEventTypes(data.selectedOptions);
+                }}
               >
                 <Option value={EventType.DEWORMING}>Deworming</Option>
                 <Option value={EventType.DELICING}>Delicing</Option>
@@ -164,6 +241,11 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
                 <Option value={EventType.HEALTH_CHECK}>Health Check</Option>
                 <Option value={EventType.OTHER}>Other</Option>
               </Dropdown>
+              {!isEdit && (
+                <Text className={styles.infoText}>
+                  Select multiple event types to create all of them
+                </Text>
+              )}
             </div>
 
             <div className={styles.field}>
@@ -172,8 +254,8 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
                 type="date"
                 id="event_date"
                 name="event_date"
-                value={formData.event_date}
-                onChange={(_, data) => handleChange({ target: { name: 'event_date', value: data.value } } as any)}
+                value={eventDate}
+                onChange={(_, data) => setEventDate(data.value)}
                 required
               />
             </div>
@@ -184,11 +266,16 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
             <Textarea
               id="description"
               name="description"
-              value={formData.description}
-              onChange={(_, data) => handleChange({ target: { name: 'description', value: data.value } } as any)}
+              value={description}
+              onChange={(_, data) => setDescription(data.value)}
               rows={3}
               placeholder="Brief description of the event..."
             />
+            {isBulkMode && !isEdit && (
+              <Text className={styles.infoText}>
+                This description will be applied to all {eventCount} events
+              </Text>
+            )}
           </div>
 
           <div className={styles.field}>
@@ -196,20 +283,27 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
             <Textarea
               id="notes"
               name="notes"
-              value={formData.notes}
-              onChange={(_, data) => handleChange({ target: { name: 'notes', value: data.value } } as any)}
+              value={notes}
+              onChange={(_, data) => setNotes(data.value)}
               rows={4}
               placeholder="Additional notes, observations, or details..."
             />
+            {isBulkMode && !isEdit && (
+              <Text className={styles.infoText}>
+                These notes will be applied to all {eventCount} events
+              </Text>
+            )}
           </div>
 
           <div className={styles.actions}>
             <Button
               type="submit"
               appearance="primary"
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={createMutation.isPending || updateMutation.isPending || createBulkMutation.isPending}
             >
-              {createMutation.isPending || updateMutation.isPending ? 'Saving...' : (isEdit ? 'Update' : 'Create')}
+              {(createMutation.isPending || updateMutation.isPending || createBulkMutation.isPending)
+                ? 'Saving...'
+                : (isEdit ? 'Update' : (isBulkMode ? `Create ${eventCount} Events` : 'Create'))}
             </Button>
             <Button
               type="button"

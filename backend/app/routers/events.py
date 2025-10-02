@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import date
 from app.database.database import get_db
-from app.schemas import Event, EventCreate, EventUpdate, EventWithAnimal
+from app.schemas import Event, EventCreate, EventUpdate, EventWithAnimal, EventBulkCreate
 from app.services.event_service import EventService
 from app.models.event import EventType
 from app.services.auth import get_current_active_user, require_admin, require_user
@@ -45,6 +45,17 @@ def create_event(
     """Create a new event"""
     service = EventService(db)
     return service.create_event(event)
+
+
+@router.post("/bulk", response_model=List[Event])
+def create_bulk_events(
+    bulk_create: EventBulkCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
+):
+    """Create multiple events at once"""
+    service = EventService(db)
+    return service.create_bulk_events(bulk_create)
 
 
 @router.get("/search")
