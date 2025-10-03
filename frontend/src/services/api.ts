@@ -51,7 +51,12 @@ export const animalsApi = {
 };
 
 export const eventsApi = {
-  getAll: () => api.get<Event[]>('/api/events'),
+  getAll: (params?: {
+    event_type?: string;
+    start_date?: string;
+    end_date?: string;
+    animal_id?: number;
+  }) => api.get<Event[]>('/api/events', { params }),
   getById: (id: number) => api.get<Event>(`/api/events/${id}`),
   getByAnimal: (animalId: number) => api.get<Event[]>(`/api/events/animal/${animalId}`),
   create: (event: EventCreateRequest) => api.post<Event>('/api/events', event),

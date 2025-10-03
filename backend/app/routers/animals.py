@@ -26,7 +26,8 @@ def read_animals(
         skip=skip,
         limit=limit,
         animal_type=animal_type,
-        location_id=location_id
+        location_id=location_id,
+        current_user=current_user
     )
     return animals
 
@@ -90,7 +91,7 @@ def update_animal(
 ):
     """Update an existing animal"""
     service = AnimalService(db)
-    updated_animal = service.update_animal(animal_id, animal)
+    updated_animal = service.update_animal(animal_id, animal, current_user)
     if updated_animal is None:
         raise HTTPException(status_code=404, detail="Animal not found")
     return updated_animal

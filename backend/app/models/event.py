@@ -8,8 +8,8 @@ from app.database.database import Base
 class EventType(enum.Enum):
     DEWORMING = "deworming"
     DELICING = "delicing"
+    MITE_TREATMENT = "mite_treatment"
     LAMBING = "lambing"
-    VACCINATION = "vaccination"
     HEALTH_CHECK = "health_check"
     MEDICATION = "medication"
     BREEDING = "breeding"

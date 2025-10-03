@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Card,
-  CardHeader,
   Text,
   Badge,
   makeStyles,
@@ -39,12 +38,6 @@ const useStyles = makeStyles({
   },
   card: {
     padding: tokens.spacingVerticalL,
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    '&:hover': {
-      transform: 'translateY(-2px)',
-      boxShadow: tokens.shadow16,
-    },
   },
   cardDetails: {
     display: 'flex',
@@ -163,18 +156,42 @@ const CustomerDashboard: React.FC = () => {
 
       {filteredAnimals && filteredAnimals.length > 0 ? (
         <div className={styles.grid}>
-          {filteredAnimals.map((animal: Animal) => (
-            <RouterLink
-              key={animal.id}
-              to={`/animals/${animal.id}`}
-              style={{ textDecoration: 'none', color: 'inherit' }}
-            >
-              <Card className={styles.card}>
-                <CardHeader>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
-                    <Text size={500} weight="semibold">
-                      {animal.name || `Tag: ${animal.tag_number}`}
-                    </Text>
+          {filteredAnimals.map((animal: Animal) => {
+            const photographs = animal.photographs || [];
+            const primaryPhoto = photographs.find(p => p.is_primary) || photographs[0];
+            const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+            return (
+              <Card key={animal.id} className={styles.card}>
+                <RouterLink
+                  to={`/animals/${animal.id}`}
+                  style={{ textDecoration: 'none', color: 'inherit' }}
+                >
+                  {primaryPhoto && (
+                    <img
+                      src={`${API_BASE_URL}/api/photographs/${primaryPhoto.id}/file`}
+                      alt={animal.name || animal.tag_number}
+                      style={{
+                        width: '100%',
+                        height: '200px',
+                        objectFit: 'cover',
+                        borderRadius: tokens.borderRadiusMedium,
+                        marginBottom: tokens.spacingVerticalM,
+                      }}
+                    />
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: tokens.spacingVerticalM }}>
+                    <div>
+                      <Text size={500} weight="semibold" style={{ display: 'block' }}>
+                        {animal.name || `Tag: ${animal.tag_number}`}
+                      </Text>
+                      {animal.name && (
+                        <Text size={300} style={{ color: tokens.colorNeutralForeground2 }}>
+                          Tag: {animal.tag_number}
+                        </Text>
+                      )}
+                    </div>
                     <Badge appearance="filled" color="brand">
                       {animal.animal_type === AnimalType.SHEEP && animal.sheep_gender
                         ? `${animal.sheep_gender}`
@@ -183,37 +200,45 @@ const CustomerDashboard: React.FC = () => {
                         : animal.animal_type}
                     </Badge>
                   </div>
-                </CardHeader>
 
-                <div className={styles.cardDetails}>
-                  <Text size={300}>
-                    <strong>Tag:</strong> {animal.tag_number}
-                  </Text>
-                  {animal.birth_date && (
-                    <Text size={300}>
-                      <strong>Birth Date:</strong> {new Date(animal.birth_date).toLocaleDateString()}
-                    </Text>
-                  )}
-                  {animal.sire && (
-                    <Text size={300}>
-                      <strong>Sire:</strong> {animal.sire.name || animal.sire.tag_number}
-                    </Text>
-                  )}
-                  {animal.dam && (
-                    <Text size={300}>
-                      <strong>Dam:</strong> {animal.dam.name || animal.dam.tag_number}
-                    </Text>
-                  )}
-                  {animal.current_location && (
-                    <Text size={300}>
-                      <strong>Location:</strong> {animal.current_location.name}
-                      {animal.current_location.paddock_name && ` - ${animal.current_location.paddock_name}`}
-                    </Text>
-                  )}
+                  <div className={styles.cardDetails}>
+                    {animal.birth_date && (
+                      <Text size={300}>
+                        <strong>Birth Date:</strong> {new Date(animal.birth_date).toLocaleDateString()}
+                      </Text>
+                    )}
+                    {animal.sire && (
+                      <Text size={300}>
+                        <strong>Sire:</strong> {animal.sire.name || animal.sire.tag_number}
+                      </Text>
+                    )}
+                    {animal.dam && (
+                      <Text size={300}>
+                        <strong>Dam:</strong> {animal.dam.name || animal.dam.tag_number}
+                      </Text>
+                    )}
+                    {animal.current_location && (
+                      <Text size={300}>
+                        <strong>Location:</strong> {animal.current_location.name}
+                        {animal.current_location.paddock_name && ` - ${animal.current_location.paddock_name}`}
+                      </Text>
+                    )}
+                  </div>
+                </RouterLink>
+
+                <div style={{ display: 'flex', gap: tokens.spacingHorizontalM, marginTop: tokens.spacingVerticalM }}>
+                  <RouterLink to={`/animals/${animal.id}`} style={{ flex: 1, textDecoration: 'none' }}>
+                    <Button appearance="secondary" style={{ width: '100%' }}>
+                      View Details
+                    </Button>
+                  </RouterLink>
+                  <Button appearance="primary" style={{ flex: 1 }}>
+                    Buy Share
+                  </Button>
                 </div>
               </Card>
-            </RouterLink>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className={styles.emptyState}>

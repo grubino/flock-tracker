@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from fastapi import HTTPException
 from app.models import Animal, AnimalType, SheepGender, Location
+from app.models.user import User, UserRole
 from app.schemas import AnimalCreate, AnimalUpdate
 
 
@@ -15,14 +16,20 @@ class AnimalService:
         skip: int = 0,
         limit: int = 100,
         animal_type: Optional[AnimalType] = None,
-        location_id: Optional[int] = None
+        location_id: Optional[int] = None,
+        current_user: Optional[User] = None
     ) -> List[Animal]:
         """Get all animals with optional filtering"""
         query = self.db.query(Animal).options(
             joinedload(Animal.current_location),
             joinedload(Animal.sire),
-            joinedload(Animal.dam)
+            joinedload(Animal.dam),
+            joinedload(Animal.photographs)
         )
+
+        # Customers can only see sellable animals
+        if current_user and current_user.role == UserRole.customer:
+            query = query.filter(Animal.is_sellable == True)
 
         if animal_type:
             query = query.filter(Animal.animal_type == animal_type)
@@ -88,7 +95,7 @@ class AnimalService:
                 raise HTTPException(status_code=400, detail="Tag number already exists")
             raise HTTPException(status_code=400, detail="Database integrity error")
 
-    def update_animal(self, animal_id: int, animal: AnimalUpdate) -> Optional[Animal]:
+    def update_animal(self, animal_id: int, animal: AnimalUpdate, current_user: Optional[User] = None) -> Optional[Animal]:
         """Update an existing animal"""
         db_animal = self.get_animal(animal_id)
         if not db_animal:
@@ -97,6 +104,11 @@ class AnimalService:
         try:
             # Validate references if they're being updated
             update_data = animal.model_dump(exclude_unset=True)
+
+            # Only users and admins can set sellable flags
+            if current_user and current_user.role == UserRole.customer:
+                if "is_sellable" in update_data or "allowed_shares" in update_data:
+                    raise HTTPException(status_code=403, detail="Customers cannot modify sellable settings")
 
             if "sire_id" in update_data and update_data["sire_id"]:
                 sire = self.get_animal(update_data["sire_id"])

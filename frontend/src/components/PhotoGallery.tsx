@@ -106,9 +106,10 @@ const useStyles = makeStyles({
 
 interface PhotoGalleryProps {
   animalId: number;
+  canUpload?: boolean;
 }
 
-export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId }) => {
+export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload = true }) => {
   const styles = useStyles();
   const queryClient = useQueryClient();
   const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
@@ -184,16 +185,18 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId }) => {
             Photographs ({photographs?.length || 0})
           </Text>
         </div>
-        <Button
-          appearance="primary"
-          icon={<Camera24Regular />}
-          onClick={() => setShowUpload(!showUpload)}
-        >
-          {showUpload ? 'Hide Upload' : 'Add Photos'}
-        </Button>
+        {canUpload && (
+          <Button
+            appearance="primary"
+            icon={<Camera24Regular />}
+            onClick={() => setShowUpload(!showUpload)}
+          >
+            {showUpload ? 'Hide Upload' : 'Add Photos'}
+          </Button>
+        )}
       </div>
 
-      {showUpload && (
+      {canUpload && showUpload && (
         <div className={styles.uploadSection}>
           <PhotoUpload animalId={animalId} onUploadComplete={handleUploadComplete} />
         </div>
@@ -226,7 +229,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId }) => {
                   onClick={() => openFullscreen(photo)}
                   title="View fullscreen"
                 />
-                {!photo.is_primary && (
+                {canUpload && !photo.is_primary && (
                   <Button
                     appearance="subtle"
                     icon={<Star24Regular />}
@@ -237,15 +240,17 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId }) => {
                     title="Set as primary"
                   />
                 )}
-                <Button
-                  appearance="subtle"
-                  icon={<Delete24Regular />}
-                  size="small"
-                  className={styles.actionButton}
-                  onClick={() => handleDelete(photo.id)}
-                  disabled={deleteMutation.isPending}
-                  title="Delete photograph"
-                />
+                {canUpload && (
+                  <Button
+                    appearance="subtle"
+                    icon={<Delete24Regular />}
+                    size="small"
+                    className={styles.actionButton}
+                    onClick={() => handleDelete(photo.id)}
+                    disabled={deleteMutation.isPending}
+                    title="Delete photograph"
+                  />
+                )}
               </div>
 
               {(photo.caption || photo.description) && (

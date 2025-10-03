@@ -14,19 +14,36 @@ export const ChickenGender = {
   ROOSTER: "rooster"
 } as const;
 
+export const AllowedShares = {
+  HALF: "half",
+  WHOLE: "whole"
+} as const;
+
 export const EventType = {
   DEWORMING: "deworming",
   DELICING: "delicing",
+  MITE_TREATMENT: "mite_treatment",
   LAMBING: "lambing",
-  VACCINATION: "vaccination",
   HEALTH_CHECK: "health_check",
+  DEATH: "death",
   OTHER: "other"
 } as const;
 
 export type AnimalType = typeof AnimalType[keyof typeof AnimalType];
 export type SheepGender = typeof SheepGender[keyof typeof SheepGender];
 export type ChickenGender = typeof ChickenGender[keyof typeof ChickenGender];
+export type AllowedShares = typeof AllowedShares[keyof typeof AllowedShares];
 export type EventType = typeof EventType[keyof typeof EventType];
+
+export interface Photograph {
+  id: number;
+  filename: string;
+  file_path: string;
+  caption?: string;
+  is_primary: boolean;
+  width?: number;
+  height?: number;
+}
 
 export interface Animal {
   id: number;
@@ -36,6 +53,8 @@ export interface Animal {
   sheep_gender?: SheepGender;
   chicken_gender?: ChickenGender;
   birth_date?: string;
+  is_sellable: boolean;
+  allowed_shares?: AllowedShares;
   current_location_id?: number;
   sire_id?: number;
   dam_id?: number;
@@ -44,6 +63,7 @@ export interface Animal {
   current_location?: Location;
   sire?: Animal;
   dam?: Animal;
+  photographs?: Photograph[];
 }
 
 export interface Event {
@@ -88,6 +108,8 @@ export interface AnimalCreateRequest {
   sheep_gender?: SheepGender;
   chicken_gender?: ChickenGender;
   birth_date?: string;
+  is_sellable?: boolean;
+  allowed_shares?: AllowedShares;
   current_location_id?: number;
   sire_id?: number;
   dam_id?: number;

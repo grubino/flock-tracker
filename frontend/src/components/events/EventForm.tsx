@@ -236,9 +236,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
               >
                 <Option value={EventType.DEWORMING}>Deworming</Option>
                 <Option value={EventType.DELICING}>Delicing</Option>
+                <Option value={EventType.MITE_TREATMENT}>Mite Treatment</Option>
                 <Option value={EventType.LAMBING}>Lambing</Option>
-                <Option value={EventType.VACCINATION}>Vaccination</Option>
                 <Option value={EventType.HEALTH_CHECK}>Health Check</Option>
+                <Option value={EventType.DEATH}>Death</Option>
                 <Option value={EventType.OTHER}>Other</Option>
               </Dropdown>
               {!isEdit && (

@@ -13,6 +13,7 @@ import {
 import { animalsApi, eventsApi } from '../../services/api';
 import { AnimalType } from '../../types';
 import { PhotoGallery } from '../PhotoGallery';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 const useStyles = makeStyles({
   container: {
@@ -75,6 +76,7 @@ const AnimalDetail: React.FC = () => {
   const styles = useStyles();
   const { id } = useParams<{ id: string }>();
   const animalId = parseInt(id!);
+  const { canWrite, isCustomer } = useRoleAccess();
 
   const { data: animal, isLoading: animalLoading, error: animalError } = useQuery({
     queryKey: ['animal', animalId],
@@ -117,16 +119,31 @@ const AnimalDetail: React.FC = () => {
           {animal.name || `Tag: ${animal.tag_number}`}
         </Text>
         <div className={styles.actions}>
-          <RouterLink to={`/animals/${animal.id}/edit`} style={{ textDecoration: 'none' }}>
-            <Button appearance="primary">
-              Edit
-            </Button>
-          </RouterLink>
-          <RouterLink to="/animals" style={{ textDecoration: 'none' }}>
-            <Button appearance="secondary">
-              Back to List
-            </Button>
-          </RouterLink>
+          {isCustomer ? (
+            <>
+              <Button appearance="primary" size="large">
+                Buy Share
+              </Button>
+              <RouterLink to="/" style={{ textDecoration: 'none' }}>
+                <Button appearance="secondary">
+                  Back to Catalog
+                </Button>
+              </RouterLink>
+            </>
+          ) : (
+            <>
+              <RouterLink to={`/animals/${animal.id}/edit`} style={{ textDecoration: 'none' }}>
+                <Button appearance="primary">
+                  Edit
+                </Button>
+              </RouterLink>
+              <RouterLink to="/animals" style={{ textDecoration: 'none' }}>
+                <Button appearance="secondary">
+                  Back to List
+                </Button>
+              </RouterLink>
+            </>
+          )}
         </div>
       </div>
 
@@ -186,6 +203,31 @@ const AnimalDetail: React.FC = () => {
                   )}
                 </Text>
               </div>
+              {!isCustomer && (
+                <>
+                  <div className={styles.field}>
+                    <Text size={300} className={styles.label}>Available for Share Purchase</Text>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
+                      <Text size={400} className={styles.value}>
+                        {animal.is_sellable ? 'Yes' : 'No'}
+                      </Text>
+                      {animal.is_sellable && (
+                        <Badge appearance="filled" color="success">
+                          Sellable
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  {animal.is_sellable && animal.allowed_shares && (
+                    <div className={styles.field}>
+                      <Text size={300} className={styles.label}>Allowed Share Sizes</Text>
+                      <Text size={400} className={styles.value} style={{ textTransform: 'capitalize' }}>
+                        {animal.allowed_shares} Share
+                      </Text>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
@@ -225,11 +267,13 @@ const AnimalDetail: React.FC = () => {
         <div style={{ marginTop: tokens.spacingVerticalXL }}>
           <div className={styles.header}>
             <Text as="h2" size={600} weight="semibold">Events</Text>
-            <RouterLink to={`/events/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
-              <Button appearance="primary">
-                Add Event
-              </Button>
-            </RouterLink>
+            {canWrite && (
+              <RouterLink to={`/events/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
+                <Button appearance="primary">
+                  Add Event
+                </Button>
+              </RouterLink>
+            )}
           </div>
 
           {eventsLoading ? (
@@ -263,11 +307,13 @@ const AnimalDetail: React.FC = () => {
                         </Text>
                       )}
                     </div>
-                    <RouterLink to={`/events/${event.id}/edit`} style={{ textDecoration: 'none' }}>
-                      <Button appearance="subtle" size="small">
-                        Edit
-                      </Button>
-                    </RouterLink>
+                    {canWrite && (
+                      <RouterLink to={`/events/${event.id}/edit`} style={{ textDecoration: 'none' }}>
+                        <Button appearance="subtle" size="small">
+                          Edit
+                        </Button>
+                      </RouterLink>
+                    )}
                   </div>
                 </Card>
               ))}
@@ -277,17 +323,19 @@ const AnimalDetail: React.FC = () => {
               <Text style={{ marginBottom: tokens.spacingVerticalM, display: 'block' }}>
                 No events recorded for this animal
               </Text>
-              <RouterLink to={`/events/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
-                <Button appearance="primary">
-                  Add the first event
-                </Button>
-              </RouterLink>
+              {canWrite && (
+                <RouterLink to={`/events/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
+                  <Button appearance="primary">
+                    Add the first event
+                  </Button>
+                </RouterLink>
+              )}
             </div>
           )}
         </div>
 
         {/* Photo Gallery Section */}
-        <PhotoGallery animalId={animal.id} />
+        <PhotoGallery animalId={animal.id} canUpload={canWrite} />
       </Card>
     </div>
   );

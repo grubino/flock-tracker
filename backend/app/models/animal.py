@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -16,6 +16,11 @@ class SheepGender(enum.Enum):
     RAM = "ram"
 
 
+class AllowedShares(enum.Enum):
+    HALF = "half"
+    WHOLE = "whole"
+
+
 class Animal(Base):
     __tablename__ = "animals"
 
@@ -25,6 +30,10 @@ class Animal(Base):
     animal_type = Column(SQLEnum(AnimalType), nullable=False)
     sheep_gender = Column(SQLEnum(SheepGender), nullable=True)
     birth_date = Column(DateTime, nullable=True)
+
+    # Sellable shares configuration
+    is_sellable = Column(Boolean, default=False, nullable=False)
+    allowed_shares = Column(SQLEnum(AllowedShares), nullable=True)
 
     # Current location
     current_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)
