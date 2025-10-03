@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
   Text,
@@ -9,13 +9,12 @@ import {
   Label,
   Textarea,
   makeStyles,
-  tokens
+  tokens,
 } from '@fluentui/react-components';
 import { vendorsApi } from '../../services/api';
-import type { VendorCreateRequest, Vendor } from '../../types';
+import type { VendorCreateRequest } from '../../types';
 
 interface VendorFormProps {
-  vendor?: Vendor;
   isEdit?: boolean;
 }
 
@@ -47,15 +46,33 @@ const useStyles = makeStyles({
   },
 });
 
-const VendorForm: React.FC<VendorFormProps> = ({ vendor, isEdit = false }) => {
+const VendorForm: React.FC<VendorFormProps> = ({ isEdit = false }) => {
   const styles = useStyles();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { id } = useParams<{ id: string }>();
 
-  const [name, setName] = useState(vendor?.name || '');
-  const [address, setAddress] = useState(vendor?.address || '');
-  const [phone, setPhone] = useState(vendor?.phone || '');
-  const [website, setWebsite] = useState(vendor?.website || '');
+  const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
+  const [website, setWebsite] = useState('');
+
+  // Fetch vendor data if editing
+  const { data: vendor } = useQuery({
+    queryKey: ['vendor', id],
+    queryFn: () => vendorsApi.getById(parseInt(id!)).then(res => res.data),
+    enabled: isEdit && !!id,
+  });
+
+  // Update form fields when vendor data is loaded
+  useEffect(() => {
+    if (vendor) {
+      setName(vendor.name);
+      setAddress(vendor.address || '');
+      setPhone(vendor.phone || '');
+      setWebsite(vendor.website || '');
+    }
+  }, [vendor]);
 
   const createMutation = useMutation({
     mutationFn: (data: VendorCreateRequest) => vendorsApi.create(data),
