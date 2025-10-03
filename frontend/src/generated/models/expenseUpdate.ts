@@ -26,6 +26,8 @@ import type { ExpenseUpdateDescription } from './expenseUpdateDescription';
 import type { ExpenseUpdateNotes } from './expenseUpdateNotes';
 import type { ExpenseUpdateExpenseDate } from './expenseUpdateExpenseDate';
 import type { ExpenseUpdateVendorId } from './expenseUpdateVendorId';
+import type { ExpenseUpdateReceiptId } from './expenseUpdateReceiptId';
+import type { ExpenseUpdateLineItems } from './expenseUpdateLineItems';
 
 export interface ExpenseUpdate {
   category?: ExpenseUpdateCategory;
@@ -34,4 +36,6 @@ export interface ExpenseUpdate {
   notes?: ExpenseUpdateNotes;
   expense_date?: ExpenseUpdateExpenseDate;
   vendor_id?: ExpenseUpdateVendorId;
+  receipt_id?: ExpenseUpdateReceiptId;
+  line_items?: ExpenseUpdateLineItems;
 }

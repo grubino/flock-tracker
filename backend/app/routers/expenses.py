@@ -5,6 +5,7 @@ from datetime import datetime
 from app.database.database import get_db
 from app.schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseResponse
 from app.models.expense import Expense, ExpenseCategory
+from app.models.expense_line_item import ExpenseLineItem
 from app.services.auth import get_current_active_user, require_user
 from app.models.user import User
 
@@ -45,9 +46,22 @@ def create_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user)
 ):
-    """Create a new expense"""
-    db_expense = Expense(**expense.model_dump())
+    """Create a new expense with optional line items"""
+    # Extract line items before creating expense
+    line_items_data = expense.line_items
+    expense_data = expense.model_dump(exclude={'line_items'})
+
+    # Create expense
+    db_expense = Expense(**expense_data)
     db.add(db_expense)
+    db.flush()  # Flush to get the expense ID
+
+    # Create line items
+    if line_items_data:
+        for item_data in line_items_data:
+            db_line_item = ExpenseLineItem(**item_data.model_dump(), expense_id=db_expense.id)
+            db.add(db_line_item)
+
     db.commit()
     db.refresh(db_expense)
     return db_expense
@@ -73,14 +87,24 @@ def update_expense(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_user)
 ):
-    """Update an existing expense"""
+    """Update an existing expense and its line items"""
     db_expense = db.query(Expense).filter(Expense.id == expense_id).first()
     if not db_expense:
         raise HTTPException(status_code=404, detail="Expense not found")
 
-    update_data = expense_update.model_dump(exclude_unset=True)
+    update_data = expense_update.model_dump(exclude_unset=True, exclude={'line_items'})
     for field, value in update_data.items():
         setattr(db_expense, field, value)
+
+    # Update line items if provided
+    if expense_update.line_items is not None:
+        # Delete existing line items
+        db.query(ExpenseLineItem).filter(ExpenseLineItem.expense_id == expense_id).delete()
+
+        # Add new line items
+        for item_data in expense_update.line_items:
+            db_line_item = ExpenseLineItem(**item_data.model_dump(), expense_id=expense_id)
+            db.add(db_line_item)
 
     db.commit()
     db.refresh(db_expense)

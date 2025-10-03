@@ -29,6 +29,7 @@ class Expense(Base):
     notes = Column(Text, nullable=True)
     expense_date = Column(DateTime, nullable=False, index=True)
     vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=True)
+    receipt_id = Column(Integer, ForeignKey("receipts.id"), nullable=True)
 
     # Timestamps
     created_at = Column(DateTime, default=func.now())
@@ -36,6 +37,8 @@ class Expense(Base):
 
     # Relationships
     vendor = relationship("Vendor", back_populates="expenses")
+    receipt = relationship("Receipt", back_populates="expense")
+    line_items = relationship("ExpenseLineItem", back_populates="expense", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Expense(id={self.id}, category='{self.category.value}', amount={self.amount}, date='{self.expense_date}')>"

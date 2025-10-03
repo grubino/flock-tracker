@@ -12,11 +12,20 @@ import {
   Textarea,
   makeStyles,
   tokens,
-  Combobox
+  Combobox,
+  Divider,
+  Table,
+  TableHeader,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell
 } from '@fluentui/react-components';
+import { Delete24Regular, Add24Regular } from '@fluentui/react-icons';
 import { expensesApi, vendorsApi } from '../../services/api';
 import { ExpenseCategory } from '../../types';
-import type { ExpenseCreateRequest, Expense, VendorCreateRequest } from '../../types';
+import type { ExpenseCreateRequest, Expense, VendorCreateRequest, Receipt, OCRResult, ExpenseLineItemCreate } from '../../types';
+import ReceiptUpload from '../receipts/ReceiptUpload';
 
 interface ExpenseFormProps {
   expense?: Expense;
@@ -36,13 +45,55 @@ const useStyles = makeStyles({
   },
   formGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
     gap: tokens.spacingVerticalL,
+    '& > *': {
+      minWidth: 0, // Allow grid items to shrink
+    },
   },
   field: {
     display: 'flex',
     flexDirection: 'column',
     gap: tokens.spacingVerticalS,
+    minWidth: 0, // Allow flex items to shrink below content size
+  },
+  dropdown: {
+    width: '100%',
+    maxWidth: '100%',
+    minWidth: 0,
+    '& button': {
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: 0,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+    },
+    '& button span': {
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+    },
+  },
+  lineItemsTable: {
+    tableLayout: 'fixed',
+    width: '100%',
+    '& th:nth-of-type(1)': { width: '38%' }, // Description - larger
+    '& th:nth-of-type(2)': { width: '22%' }, // Category
+    '& th:nth-of-type(3)': { width: '10%' }, // Quantity
+    '& th:nth-of-type(4)': { width: '13%' }, // Unit Price
+    '& th:nth-of-type(5)': { width: '7%' },  // Amount - half size
+    '& th:nth-of-type(6)': { width: '10%' }, // Actions
+    '& input': {
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: 0,
+      boxSizing: 'border-box',
+    },
+    '& td:nth-of-type(5) input': {
+      paddingLeft: '4px',
+      paddingRight: '4px',
+    },
   },
   actions: {
     display: 'flex',
@@ -67,6 +118,11 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
   const [expenseDate, setExpenseDate] = useState(
     expense?.expense_date ? expense.expense_date.split('T')[0] : new Date().toISOString().split('T')[0]
   );
+  const [showReceiptUpload, setShowReceiptUpload] = useState(!isEdit);
+  const [lineItems, setLineItems] = useState<ExpenseLineItemCreate[]>(
+    expense?.line_items || []
+  );
+  const [receiptId, setReceiptId] = useState<number | null>(expense?.receipt_id || null);
 
   // Debounce vendor search
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(vendorSearchQuery);
@@ -130,6 +186,68 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
     setVendorSearchQuery(vendorName);
   };
 
+  const handleReceiptComplete = (receipt: Receipt, ocrResult: OCRResult) => {
+    // Save receipt ID
+    setReceiptId(receipt.id);
+
+    // Populate form with OCR data
+    if (ocrResult.vendor) {
+      setVendorSearchQuery(ocrResult.vendor);
+      // Try to find matching vendor
+      const matchingVendor = vendors?.find(v =>
+        v.name.toLowerCase() === ocrResult.vendor?.toLowerCase()
+      );
+      if (matchingVendor) {
+        setSelectedVendorId(matchingVendor.id);
+      }
+    }
+
+    if (ocrResult.total) {
+      setAmount(ocrResult.total);
+    }
+
+    if (ocrResult.date) {
+      setExpenseDate(ocrResult.date);
+    }
+
+    if (ocrResult.items.length > 0) {
+      // Set line items from OCR
+      const ocrLineItems = ocrResult.items.map(item => ({
+        description: item.description,
+        amount: item.amount,
+      }));
+      setLineItems(ocrLineItems);
+
+      // Use first item description or "Multiple items" for main description
+      setDescription(ocrResult.items.length === 1 ? ocrResult.items[0].description : 'Multiple items');
+    }
+
+    // Hide upload and show form
+    setShowReceiptUpload(false);
+  };
+
+  const handleAddLineItem = () => {
+    setLineItems([...lineItems, {
+      description: '',
+      amount: '0',
+      category: selectedCategory[0] as typeof ExpenseCategory[keyof typeof ExpenseCategory]
+    }]);
+  };
+
+  const handleRemoveLineItem = (index: number) => {
+    setLineItems(lineItems.filter((_, i) => i !== index));
+  };
+
+  const handleLineItemChange = (index: number, field: keyof ExpenseLineItemCreate, value: string) => {
+    const newLineItems = [...lineItems];
+    newLineItems[index] = { ...newLineItems[index], [field]: value };
+    setLineItems(newLineItems);
+
+    // Recalculate total amount
+    const total = newLineItems.reduce((sum, item) => sum + parseFloat(item.amount || '0'), 0);
+    setAmount(total.toFixed(2));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -139,7 +257,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
       description,
       notes: notes || undefined,
       vendor_id: selectedVendorId || undefined,
+      receipt_id: receiptId || undefined,
       expense_date: new Date(expenseDate).toISOString(),
+      line_items: lineItems.length > 0 ? lineItems : undefined,
     };
 
     if (isEdit) {
@@ -156,16 +276,38 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
 
   return (
     <div className={styles.container}>
-      <Card>
-        <Text size={600} weight="semibold">
-          {isEdit ? 'Edit Expense' : 'Add New Expense'}
-        </Text>
-        <form onSubmit={handleSubmit} className={styles.form}>
+      {!isEdit && showReceiptUpload && (
+        <>
+          <ReceiptUpload onComplete={handleReceiptComplete} />
+          <Divider style={{ margin: `${tokens.spacingVerticalXL} 0` }}>
+            OR
+          </Divider>
+          <Button onClick={() => setShowReceiptUpload(false)}>
+            Enter Expense Manually
+          </Button>
+        </>
+      )}
+
+      {(!showReceiptUpload || isEdit) && (
+        <Card>
+          <Text size={600} weight="semibold">
+            {isEdit ? 'Edit Expense' : 'Add New Expense'}
+          </Text>
+          {!isEdit && (
+            <Button
+              onClick={() => setShowReceiptUpload(true)}
+              style={{ marginTop: tokens.spacingVerticalS }}
+            >
+              Upload Receipt Instead
+            </Button>
+          )}
+          <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGrid}>
             <div className={styles.field}>
               <Label htmlFor="category" required>Category</Label>
               <Dropdown
                 id="category"
+                className={styles.dropdown}
                 value={categoryOptions.find(opt => opt.key === selectedCategory[0])?.text || ''}
                 selectedOptions={selectedCategory}
                 onOptionSelect={(_, data) => setSelectedCategory(data.selectedOptions)}
@@ -274,6 +416,99 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
             />
           </div>
 
+          {/* Line Items Section */}
+          <div className={styles.field}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: tokens.spacingVerticalS }}>
+              <Label>Line Items</Label>
+              <Button
+                size="small"
+                icon={<Add24Regular />}
+                onClick={handleAddLineItem}
+                type="button"
+              >
+                Add Line Item
+              </Button>
+            </div>
+
+            {lineItems.length > 0 && (
+              <Table className={styles.lineItemsTable}>
+                <TableHeader>
+                  <TableRow>
+                    <TableHeaderCell>Description</TableHeaderCell>
+                    <TableHeaderCell>Category</TableHeaderCell>
+                    <TableHeaderCell>Quantity</TableHeaderCell>
+                    <TableHeaderCell>Unit Price</TableHeaderCell>
+                    <TableHeaderCell>Amount</TableHeaderCell>
+                    <TableHeaderCell></TableHeaderCell>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lineItems.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Input
+                          value={item.description}
+                          onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
+                          placeholder="Item description"
+                          required
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Dropdown
+                          className={styles.dropdown}
+                          value={categoryOptions.find(opt => opt.key === item.category)?.text || ''}
+                          selectedOptions={item.category ? [item.category] : []}
+                          onOptionSelect={(_, data) => handleLineItemChange(index, 'category', data.selectedOptions[0])}
+                        >
+                          {categoryOptions.map(option => (
+                            <Option key={option.key} value={option.key}>
+                              {option.text}
+                            </Option>
+                          ))}
+                        </Dropdown>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.quantity || ''}
+                          onChange={(e) => handleLineItemChange(index, 'quantity', e.target.value)}
+                          placeholder="Qty"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.unit_price || ''}
+                          onChange={(e) => handleLineItemChange(index, 'unit_price', e.target.value)}
+                          placeholder="Price"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.amount}
+                          onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
+                          required
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          icon={<Delete24Regular />}
+                          appearance="subtle"
+                          onClick={() => handleRemoveLineItem(index)}
+                          type="button"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+
           <div className={styles.actions}>
             <Button type="submit" appearance="primary">
               {isEdit ? 'Update Expense' : 'Create Expense'}
@@ -283,7 +518,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
             </Button>
           </div>
         </form>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 };

@@ -24,6 +24,8 @@ import type { ExpenseCategory } from './expenseCategory';
 import type { ExpenseCreateAmount } from './expenseCreateAmount';
 import type { ExpenseCreateNotes } from './expenseCreateNotes';
 import type { ExpenseCreateVendorId } from './expenseCreateVendorId';
+import type { ExpenseCreateReceiptId } from './expenseCreateReceiptId';
+import type { ExpenseCreateLineItems } from './expenseCreateLineItems';
 
 export interface ExpenseCreate {
   category: ExpenseCategory;
@@ -33,4 +35,6 @@ export interface ExpenseCreate {
   notes?: ExpenseCreateNotes;
   expense_date: string;
   vendor_id?: ExpenseCreateVendorId;
+  receipt_id?: ExpenseCreateReceiptId;
+  line_items?: ExpenseCreateLineItems;
 }

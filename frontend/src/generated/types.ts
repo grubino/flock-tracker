@@ -583,7 +583,7 @@ export interface paths {
         put?: never;
         /**
          * Create Expense
-         * @description Create a new expense
+         * @description Create a new expense with optional line items
          */
         post: operations["create_expense_api_expenses_post"];
         delete?: never;
@@ -606,7 +606,7 @@ export interface paths {
         get: operations["get_expense_api_expenses__expense_id__get"];
         /**
          * Update Expense
-         * @description Update an existing expense
+         * @description Update an existing expense and its line items
          */
         put: operations["update_expense_api_expenses__expense_id__put"];
         post?: never;
@@ -667,6 +667,110 @@ export interface paths {
          * @description Delete a vendor
          */
         delete: operations["delete_vendor_api_vendors__vendor_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/receipts/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload Receipt
+         * @description Upload a receipt image or PDF for OCR processing
+         */
+        post: operations["upload_receipt_api_receipts_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/receipts/{receipt_id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process Receipt
+         * @description Process a receipt with OCR and extract structured data (async with Celery)
+         */
+        post: operations["process_receipt_api_receipts__receipt_id__process_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/receipts/task/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task Status
+         * @description Check the status of an OCR processing task
+         */
+        get: operations["get_task_status_api_receipts_task__task_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/receipts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Receipts
+         * @description Get all receipts
+         */
+        get: operations["get_receipts_api_receipts__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/receipts/{receipt_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Receipt
+         * @description Get a specific receipt
+         */
+        get: operations["get_receipt_api_receipts__receipt_id__get"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Receipt
+         * @description Delete a receipt and its file
+         */
+        delete: operations["delete_receipt_api_receipts__receipt_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1262,6 +1366,14 @@ export interface components {
              */
             is_primary: boolean;
         };
+        /** Body_upload_receipt_api_receipts_upload_post */
+        Body_upload_receipt_api_receipts_upload_post: {
+            /**
+             * File
+             * Format: binary
+             */
+            file: string;
+        };
         /**
          * Event
          * @description Schema for returning event data
@@ -1493,6 +1605,39 @@ export interface components {
             expense_date: string;
             /** Vendor Id */
             vendor_id?: number | null;
+            /** Receipt Id */
+            receipt_id?: number | null;
+            /**
+             * Line Items
+             * @default []
+             */
+            line_items: components["schemas"]["ExpenseLineItemCreate"][] | null;
+        };
+        /** ExpenseLineItemCreate */
+        ExpenseLineItemCreate: {
+            /** Description */
+            description: string;
+            category?: components["schemas"]["ExpenseCategory"] | null;
+            /** Quantity */
+            quantity?: number | string | null;
+            /** Unit Price */
+            unit_price?: number | string | null;
+            /** Amount */
+            amount: number | string;
+        };
+        /** ExpenseLineItemResponse */
+        ExpenseLineItemResponse: {
+            /** Description */
+            description: string;
+            category?: components["schemas"]["ExpenseCategory"] | null;
+            /** Quantity */
+            quantity?: string | null;
+            /** Unit Price */
+            unit_price?: string | null;
+            /** Amount */
+            amount: string;
+            /** Id */
+            id: number;
         };
         /** ExpenseResponse */
         ExpenseResponse: {
@@ -1510,6 +1655,8 @@ export interface components {
             expense_date: string;
             /** Vendor Id */
             vendor_id?: number | null;
+            /** Receipt Id */
+            receipt_id?: number | null;
             /** Id */
             id: number;
             /**
@@ -1523,6 +1670,12 @@ export interface components {
              */
             updated_at: string;
             vendor?: components["schemas"]["VendorResponse"] | null;
+            receipt?: components["schemas"]["ReceiptBrief"] | null;
+            /**
+             * Line Items
+             * @default []
+             */
+            line_items: components["schemas"]["ExpenseLineItemResponse"][];
         };
         /** ExpenseUpdate */
         ExpenseUpdate: {
@@ -1537,6 +1690,10 @@ export interface components {
             expense_date?: string | null;
             /** Vendor Id */
             vendor_id?: number | null;
+            /** Receipt Id */
+            receipt_id?: number | null;
+            /** Line Items */
+            line_items?: components["schemas"]["ExpenseLineItemCreate"][] | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1859,6 +2016,42 @@ export interface components {
              * @default Photograph uploaded successfully
              */
             message: string;
+        };
+        /** ReceiptBrief */
+        ReceiptBrief: {
+            /** Id */
+            id: number;
+            /** Filename */
+            filename: string;
+            /** File Path */
+            file_path: string;
+        };
+        /** ReceiptResponse */
+        ReceiptResponse: {
+            /** Filename */
+            filename: string;
+            /** File Type */
+            file_type: string;
+            /** Id */
+            id: number;
+            /** File Path */
+            file_path: string;
+            /** Raw Text */
+            raw_text?: string | null;
+            /** Extracted Data */
+            extracted_data?: Record<string, never> | null;
+            /** Expense Id */
+            expense_id?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** ResetUserPassword */
         ResetUserPassword: {
@@ -3443,6 +3636,195 @@ export interface operations {
             header?: never;
             path: {
                 vendor_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_receipt_api_receipts_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_receipt_api_receipts_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    process_receipt_api_receipts__receipt_id__process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                receipt_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_status_api_receipts_task__task_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_receipts_api_receipts__get: {
+        parameters: {
+            query?: {
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_receipt_api_receipts__receipt_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                receipt_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceiptResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_receipt_api_receipts__receipt_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                receipt_id: number;
             };
             cookie?: never;
         };

@@ -152,6 +152,29 @@ export interface VendorCreateRequest {
   website?: string;
 }
 
+export interface ExpenseLineItem {
+  id: number;
+  description: string;
+  category?: ExpenseCategory;
+  quantity?: string;
+  unit_price?: string;
+  amount: string;
+}
+
+export interface ExpenseLineItemCreate {
+  description: string;
+  category?: ExpenseCategory;
+  quantity?: string;
+  unit_price?: string;
+  amount: string;
+}
+
+export interface ReceiptBrief {
+  id: number;
+  filename: string;
+  file_path: string;
+}
+
 export interface Expense {
   id: number;
   category: ExpenseCategory;
@@ -160,7 +183,10 @@ export interface Expense {
   notes?: string;
   expense_date: string;
   vendor_id?: number;
+  receipt_id?: number;
   vendor?: Vendor;
+  receipt?: ReceiptBrief;
+  line_items: ExpenseLineItem[];
   created_at: string;
   updated_at: string;
 }
@@ -172,4 +198,39 @@ export interface ExpenseCreateRequest {
   notes?: string;
   expense_date: string;
   vendor_id?: number;
+  receipt_id?: number;
+  line_items?: ExpenseLineItemCreate[];
+}
+
+export interface Receipt {
+  id: number;
+  filename: string;
+  file_path: string;
+  file_type: string;
+  raw_text?: string;
+  extracted_data?: OCRExtractedData;
+  expense_id?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OCRExtractedData {
+  vendor?: string;
+  items: Array<{
+    description: string;
+    amount: string;
+  }>;
+  total?: string;
+  date?: string;
+}
+
+export interface OCRResult {
+  raw_text: string;
+  vendor?: string;
+  items: Array<{
+    description: string;
+    amount: string;
+  }>;
+  total?: string;
+  date?: string;
 }

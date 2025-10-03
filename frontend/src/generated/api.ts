@@ -49,6 +49,7 @@ import type {
   AnimalWithLocation,
   AuthResponse,
   BodyUploadPhotographApiPhotographsUploadAnimalIdPost,
+  BodyUploadReceiptApiReceiptsUploadPost,
   Event,
   EventBulkCreate,
   EventCreate,
@@ -59,6 +60,7 @@ import type {
   ExpenseResponse,
   ExpenseUpdate,
   GetAvailableLocationsApiLocationsAvailableGetParams,
+  GetReceiptsApiReceiptsGetParams,
   GetRecentEventsApiEventsRecentGetParams,
   HTTPValidationError,
   ListExpensesApiExpensesGetParams,
@@ -76,6 +78,7 @@ import type {
   ReadAnimalsApiAnimalsGetParams,
   ReadEventsApiEventsGetParams,
   ReadLocationsApiLocationsGetParams,
+  ReceiptResponse,
   ResetUserPassword,
   SearchAnimalsApiAnimalsSearchGetParams,
   SearchEventsApiEventsSearchGetParams,
@@ -2773,7 +2776,7 @@ export function useListExpensesApiExpensesGet<TData = Awaited<ReturnType<typeof 
 
 
 /**
- * Create a new expense
+ * Create a new expense with optional line items
  * @summary Create Expense
  */
 export const createExpenseApiExpensesPost = (
@@ -2928,7 +2931,7 @@ export function useGetExpenseApiExpensesExpenseIdGet<TData = Awaited<ReturnType<
 
 
 /**
- * Update an existing expense
+ * Update an existing expense and its line items
  * @summary Update Expense
  */
 export const updateExpenseApiExpensesExpenseIdPut = (
@@ -3426,6 +3429,469 @@ export const useDeleteVendorApiVendorsVendorIdDelete = <TError = HTTPValidationE
       > => {
 
       const mutationOptions = getDeleteVendorApiVendorsVendorIdDeleteMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    
+/**
+ * Upload a receipt image or PDF for OCR processing
+ * @summary Upload Receipt
+ */
+export const uploadReceiptApiReceiptsUploadPost = (
+    bodyUploadReceiptApiReceiptsUploadPost: BodyUploadReceiptApiReceiptsUploadPost,
+ signal?: AbortSignal
+) => {
+      
+      const formData = new FormData();
+formData.append(`file`, bodyUploadReceiptApiReceiptsUploadPost.file)
+
+      return apiClient<ReceiptResponse>(
+      {url: `/api/receipts/upload`, method: 'POST',
+      headers: {'Content-Type': 'multipart/form-data', },
+       data: formData, signal
+    },
+      );
+    }
+  
+
+
+export const getUploadReceiptApiReceiptsUploadPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadReceiptApiReceiptsUploadPost>>, TError,{data: BodyUploadReceiptApiReceiptsUploadPost}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof uploadReceiptApiReceiptsUploadPost>>, TError,{data: BodyUploadReceiptApiReceiptsUploadPost}, TContext> => {
+
+const mutationKey = ['uploadReceiptApiReceiptsUploadPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadReceiptApiReceiptsUploadPost>>, {data: BodyUploadReceiptApiReceiptsUploadPost}> = (props) => {
+          const {data} = props ?? {};
+
+          return  uploadReceiptApiReceiptsUploadPost(data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadReceiptApiReceiptsUploadPostMutationResult = NonNullable<Awaited<ReturnType<typeof uploadReceiptApiReceiptsUploadPost>>>
+    export type UploadReceiptApiReceiptsUploadPostMutationBody = BodyUploadReceiptApiReceiptsUploadPost
+    export type UploadReceiptApiReceiptsUploadPostMutationError = HTTPValidationError
+
+    /**
+ * @summary Upload Receipt
+ */
+export const useUploadReceiptApiReceiptsUploadPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadReceiptApiReceiptsUploadPost>>, TError,{data: BodyUploadReceiptApiReceiptsUploadPost}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof uploadReceiptApiReceiptsUploadPost>>,
+        TError,
+        {data: BodyUploadReceiptApiReceiptsUploadPost},
+        TContext
+      > => {
+
+      const mutationOptions = getUploadReceiptApiReceiptsUploadPostMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    
+/**
+ * Process a receipt with OCR and extract structured data (async with Celery)
+ * @summary Process Receipt
+ */
+export const processReceiptApiReceiptsReceiptIdProcessPost = (
+    receiptId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<unknown>(
+      {url: `/api/receipts/${receiptId}/process`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getProcessReceiptApiReceiptsReceiptIdProcessPostMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processReceiptApiReceiptsReceiptIdProcessPost>>, TError,{receiptId: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof processReceiptApiReceiptsReceiptIdProcessPost>>, TError,{receiptId: number}, TContext> => {
+
+const mutationKey = ['processReceiptApiReceiptsReceiptIdProcessPost'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof processReceiptApiReceiptsReceiptIdProcessPost>>, {receiptId: number}> = (props) => {
+          const {receiptId} = props ?? {};
+
+          return  processReceiptApiReceiptsReceiptIdProcessPost(receiptId,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProcessReceiptApiReceiptsReceiptIdProcessPostMutationResult = NonNullable<Awaited<ReturnType<typeof processReceiptApiReceiptsReceiptIdProcessPost>>>
+    
+    export type ProcessReceiptApiReceiptsReceiptIdProcessPostMutationError = HTTPValidationError
+
+    /**
+ * @summary Process Receipt
+ */
+export const useProcessReceiptApiReceiptsReceiptIdProcessPost = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof processReceiptApiReceiptsReceiptIdProcessPost>>, TError,{receiptId: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof processReceiptApiReceiptsReceiptIdProcessPost>>,
+        TError,
+        {receiptId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getProcessReceiptApiReceiptsReceiptIdProcessPostMutationOptions(options);
+
+      return useMutation(mutationOptions , queryClient);
+    }
+    
+/**
+ * Check the status of an OCR processing task
+ * @summary Get Task Status
+ */
+export const getTaskStatusApiReceiptsTaskTaskIdGet = (
+    taskId: string,
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<unknown>(
+      {url: `/api/receipts/task/${taskId}`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+export const getGetTaskStatusApiReceiptsTaskTaskIdGetQueryKey = (taskId?: string,) => {
+    return [`/api/receipts/task/${taskId}`] as const;
+    }
+
+    
+export const getGetTaskStatusApiReceiptsTaskTaskIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError = HTTPValidationError>(taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaskStatusApiReceiptsTaskTaskIdGetQueryKey(taskId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>> = ({ signal }) => getTaskStatusApiReceiptsTaskTaskIdGet(taskId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(taskId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetTaskStatusApiReceiptsTaskTaskIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>>
+export type GetTaskStatusApiReceiptsTaskTaskIdGetQueryError = HTTPValidationError
+
+
+export function useGetTaskStatusApiReceiptsTaskTaskIdGet<TData = Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError = HTTPValidationError>(
+ taskId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaskStatusApiReceiptsTaskTaskIdGet<TData = Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError = HTTPValidationError>(
+ taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetTaskStatusApiReceiptsTaskTaskIdGet<TData = Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError = HTTPValidationError>(
+ taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Task Status
+ */
+
+export function useGetTaskStatusApiReceiptsTaskTaskIdGet<TData = Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError = HTTPValidationError>(
+ taskId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getTaskStatusApiReceiptsTaskTaskIdGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetTaskStatusApiReceiptsTaskTaskIdGetQueryOptions(taskId,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Get all receipts
+ * @summary Get Receipts
+ */
+export const getReceiptsApiReceiptsGet = (
+    params?: GetReceiptsApiReceiptsGetParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<ReceiptResponse[]>(
+      {url: `/api/receipts/`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+export const getGetReceiptsApiReceiptsGetQueryKey = (params?: GetReceiptsApiReceiptsGetParams,) => {
+    return [`/api/receipts/`, ...(params ? [params]: [])] as const;
+    }
+
+    
+export const getGetReceiptsApiReceiptsGetQueryOptions = <TData = Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError = HTTPValidationError>(params?: GetReceiptsApiReceiptsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReceiptsApiReceiptsGetQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>> = ({ signal }) => getReceiptsApiReceiptsGet(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetReceiptsApiReceiptsGetQueryResult = NonNullable<Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>>
+export type GetReceiptsApiReceiptsGetQueryError = HTTPValidationError
+
+
+export function useGetReceiptsApiReceiptsGet<TData = Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError = HTTPValidationError>(
+ params: undefined |  GetReceiptsApiReceiptsGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>,
+          TError,
+          Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReceiptsApiReceiptsGet<TData = Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError = HTTPValidationError>(
+ params?: GetReceiptsApiReceiptsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>,
+          TError,
+          Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReceiptsApiReceiptsGet<TData = Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError = HTTPValidationError>(
+ params?: GetReceiptsApiReceiptsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Receipts
+ */
+
+export function useGetReceiptsApiReceiptsGet<TData = Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError = HTTPValidationError>(
+ params?: GetReceiptsApiReceiptsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptsApiReceiptsGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetReceiptsApiReceiptsGetQueryOptions(params,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Get a specific receipt
+ * @summary Get Receipt
+ */
+export const getReceiptApiReceiptsReceiptIdGet = (
+    receiptId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return apiClient<ReceiptResponse>(
+      {url: `/api/receipts/${receiptId}`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+export const getGetReceiptApiReceiptsReceiptIdGetQueryKey = (receiptId?: number,) => {
+    return [`/api/receipts/${receiptId}`] as const;
+    }
+
+    
+export const getGetReceiptApiReceiptsReceiptIdGetQueryOptions = <TData = Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError = HTTPValidationError>(receiptId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReceiptApiReceiptsReceiptIdGetQueryKey(receiptId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>> = ({ signal }) => getReceiptApiReceiptsReceiptIdGet(receiptId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(receiptId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetReceiptApiReceiptsReceiptIdGetQueryResult = NonNullable<Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>>
+export type GetReceiptApiReceiptsReceiptIdGetQueryError = HTTPValidationError
+
+
+export function useGetReceiptApiReceiptsReceiptIdGet<TData = Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError = HTTPValidationError>(
+ receiptId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReceiptApiReceiptsReceiptIdGet<TData = Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError = HTTPValidationError>(
+ receiptId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>,
+          TError,
+          Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReceiptApiReceiptsReceiptIdGet<TData = Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError = HTTPValidationError>(
+ receiptId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Receipt
+ */
+
+export function useGetReceiptApiReceiptsReceiptIdGet<TData = Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError = HTTPValidationError>(
+ receiptId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReceiptApiReceiptsReceiptIdGet>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetReceiptApiReceiptsReceiptIdGetQueryOptions(receiptId,options)
+
+  const query = useQuery(queryOptions , queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+/**
+ * Delete a receipt and its file
+ * @summary Delete Receipt
+ */
+export const deleteReceiptApiReceiptsReceiptIdDelete = (
+    receiptId: number,
+ ) => {
+      
+      
+      return apiClient<unknown>(
+      {url: `/api/receipts/${receiptId}`, method: 'DELETE'
+    },
+      );
+    }
+  
+
+
+export const getDeleteReceiptApiReceiptsReceiptIdDeleteMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReceiptApiReceiptsReceiptIdDelete>>, TError,{receiptId: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteReceiptApiReceiptsReceiptIdDelete>>, TError,{receiptId: number}, TContext> => {
+
+const mutationKey = ['deleteReceiptApiReceiptsReceiptIdDelete'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteReceiptApiReceiptsReceiptIdDelete>>, {receiptId: number}> = (props) => {
+          const {receiptId} = props ?? {};
+
+          return  deleteReceiptApiReceiptsReceiptIdDelete(receiptId,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteReceiptApiReceiptsReceiptIdDeleteMutationResult = NonNullable<Awaited<ReturnType<typeof deleteReceiptApiReceiptsReceiptIdDelete>>>
+    
+    export type DeleteReceiptApiReceiptsReceiptIdDeleteMutationError = HTTPValidationError
+
+    /**
+ * @summary Delete Receipt
+ */
+export const useDeleteReceiptApiReceiptsReceiptIdDelete = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReceiptApiReceiptsReceiptIdDelete>>, TError,{receiptId: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteReceiptApiReceiptsReceiptIdDelete>>,
+        TError,
+        {receiptId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteReceiptApiReceiptsReceiptIdDeleteMutationOptions(options);
 
       return useMutation(mutationOptions , queryClient);
     }

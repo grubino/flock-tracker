@@ -1,9 +1,37 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, List
 from app.models.expense import ExpenseCategory
 from app.schemas.vendor import VendorResponse
+
+
+class ExpenseLineItemBase(BaseModel):
+    description: str = Field(..., min_length=1)
+    category: Optional[ExpenseCategory] = None
+    quantity: Optional[Decimal] = None
+    unit_price: Optional[Decimal] = None
+    amount: Decimal = Field(..., gt=0)
+
+
+class ExpenseLineItemCreate(ExpenseLineItemBase):
+    pass
+
+
+class ExpenseLineItemResponse(ExpenseLineItemBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class ReceiptBrief(BaseModel):
+    id: int
+    filename: str
+    file_path: str
+
+    class Config:
+        from_attributes = True
 
 
 class ExpenseBase(BaseModel):
@@ -13,10 +41,11 @@ class ExpenseBase(BaseModel):
     notes: Optional[str] = None
     expense_date: datetime
     vendor_id: Optional[int] = None
+    receipt_id: Optional[int] = None
 
 
 class ExpenseCreate(ExpenseBase):
-    pass
+    line_items: Optional[List[ExpenseLineItemCreate]] = []
 
 
 class ExpenseUpdate(BaseModel):
@@ -26,6 +55,8 @@ class ExpenseUpdate(BaseModel):
     notes: Optional[str] = None
     expense_date: Optional[datetime] = None
     vendor_id: Optional[int] = None
+    receipt_id: Optional[int] = None
+    line_items: Optional[List[ExpenseLineItemCreate]] = None
 
 
 class ExpenseResponse(ExpenseBase):
@@ -33,6 +64,8 @@ class ExpenseResponse(ExpenseBase):
     created_at: datetime
     updated_at: datetime
     vendor: Optional[VendorResponse] = None
+    receipt: Optional[ReceiptBrief] = None
+    line_items: List[ExpenseLineItemResponse] = []
 
     class Config:
         from_attributes = True

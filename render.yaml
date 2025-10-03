@@ -1,0 +1,61 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: flock-tracker-db
+    plan: starter  # Free tier available
+    ipAllowList: []  # Allow all IPs (or restrict as needed)
+
+  # Redis for Celery
+  - type: redis
+    name: flock-tracker-redis
+    plan: starter  # Free tier available
+    ipAllowList: []
+
+  # FastAPI Web Service
+  - type: web
+    name: flock-tracker-api
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter  # Free tier available
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: flock-tracker-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: flock-tracker-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false  # Set this manually in Render dashboard
+      - key: CORS_ORIGINS
+        value: "*"  # Update with your frontend URL in production
+
+  # Celery Worker Service
+  - type: worker
+    name: flock-tracker-worker
+    env: docker
+    dockerfilePath: ./workers/Dockerfile
+    dockerContext: .
+    plan: starter  # Free tier available
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: flock-tracker-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: flock-tracker-redis
+          property: connectionString
+
+databases:
+  - name: flock-tracker-db
+    databaseName: flock_tracker
+    user: flock_tracker_user
+    plan: starter  # Free tier available

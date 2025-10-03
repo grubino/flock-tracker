@@ -23,7 +23,10 @@
 import type { ExpenseCategory } from './expenseCategory';
 import type { ExpenseResponseNotes } from './expenseResponseNotes';
 import type { ExpenseResponseVendorId } from './expenseResponseVendorId';
+import type { ExpenseResponseReceiptId } from './expenseResponseReceiptId';
 import type { ExpenseResponseVendor } from './expenseResponseVendor';
+import type { ExpenseResponseReceipt } from './expenseResponseReceipt';
+import type { ExpenseLineItemResponse } from './expenseLineItemResponse';
 
 export interface ExpenseResponse {
   category: ExpenseCategory;
@@ -33,8 +36,11 @@ export interface ExpenseResponse {
   notes?: ExpenseResponseNotes;
   expense_date: string;
   vendor_id?: ExpenseResponseVendorId;
+  receipt_id?: ExpenseResponseReceiptId;
   id: number;
   created_at: string;
   updated_at: string;
   vendor?: ExpenseResponseVendor;
+  receipt?: ExpenseResponseReceipt;
+  line_items?: ExpenseLineItemResponse[];
 }

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest } from '../types';
+import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -99,6 +99,37 @@ export const vendorsApi = {
   create: (vendor: VendorCreateRequest) => api.post<Vendor>('/api/vendors', vendor),
   update: (id: number, vendor: Partial<VendorCreateRequest>) => api.put<Vendor>(`/api/vendors/${id}`, vendor),
   delete: (id: number) => api.delete(`/api/vendors/${id}`),
+};
+
+export const receiptsApi = {
+  getAll: (params?: {
+    skip?: number;
+    limit?: number;
+  }) => api.get<Receipt[]>('/api/receipts', { params }),
+  getById: (id: number) => api.get<Receipt>(`/api/receipts/${id}`),
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<Receipt>('/api/receipts/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  process: (id: number) => api.post<{
+    status: string;
+    task_id?: string;
+    result?: OCRResult;
+    message?: string;
+  }>(`/api/receipts/${id}/process`, {}),
+  getTaskStatus: (taskId: string) => api.get<{
+    status: string;
+    task_id: string;
+    result?: OCRResult;
+    message?: string;
+    error?: string;
+  }>(`/api/receipts/task/${taskId}`),
+  delete: (id: number) => api.delete(`/api/receipts/${id}`),
 };
 
 export default api;

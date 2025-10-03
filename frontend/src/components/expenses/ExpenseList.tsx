@@ -227,32 +227,46 @@ const ExpenseList: React.FC = () => {
                 </TableRow>
               )}
               {expenses?.map((expense) => (
-                <TableRow key={expense.id}>
-                  <TableCell>{formatDate(expense.expense_date)}</TableCell>
-                  <TableCell>
-                    {categoryOptions.find(opt => opt.key === expense.category)?.text || expense.category}
-                  </TableCell>
-                  <TableCell>{expense.description}</TableCell>
-                  <TableCell>{expense.vendor?.name || '-'}</TableCell>
-                  <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                  <TableCell>
-                    <Menu>
-                      <MenuTrigger disableButtonEnhancement>
-                        <Button icon={<MoreHorizontal24Regular />} appearance="subtle" />
-                      </MenuTrigger>
-                      <MenuPopover>
-                        <MenuList>
-                          <MenuItem onClick={() => navigate(`/expenses/${expense.id}/edit`)}>
-                            Edit
-                          </MenuItem>
-                          <MenuItem onClick={() => handleDelete(expense.id)}>
-                            Delete
-                          </MenuItem>
-                        </MenuList>
-                      </MenuPopover>
-                    </Menu>
-                  </TableCell>
-                </TableRow>
+                <React.Fragment key={expense.id}>
+                  <TableRow>
+                    <TableCell>{formatDate(expense.expense_date)}</TableCell>
+                    <TableCell>
+                      {categoryOptions.find(opt => opt.key === expense.category)?.text || expense.category}
+                    </TableCell>
+                    <TableCell>
+                      {expense.description}
+                      {expense.line_items && expense.line_items.length > 0 && (
+                        <Text size={200} block style={{ color: tokens.colorNeutralForeground3 }}>
+                          {expense.line_items.length} line item{expense.line_items.length > 1 ? 's' : ''}
+                        </Text>
+                      )}
+                      {expense.receipt && (
+                        <Text size={200} block style={{ color: tokens.colorBrandForeground1 }}>
+                          📎 Receipt attached
+                        </Text>
+                      )}
+                    </TableCell>
+                    <TableCell>{expense.vendor?.name || '-'}</TableCell>
+                    <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                    <TableCell>
+                      <Menu>
+                        <MenuTrigger disableButtonEnhancement>
+                          <Button icon={<MoreHorizontal24Regular />} appearance="subtle" />
+                        </MenuTrigger>
+                        <MenuPopover>
+                          <MenuList>
+                            <MenuItem onClick={() => navigate(`/expenses/${expense.id}/edit`)}>
+                              Edit
+                            </MenuItem>
+                            <MenuItem onClick={() => handleDelete(expense.id)}>
+                              Delete
+                            </MenuItem>
+                          </MenuList>
+                        </MenuPopover>
+                      </Menu>
+                    </TableCell>
+                  </TableRow>
+                </React.Fragment>
               ))}
             </TableBody>
           </Table>
