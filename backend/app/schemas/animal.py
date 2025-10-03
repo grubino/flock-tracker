@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List
 from datetime import datetime
-from app.models.animal import AnimalType, SheepGender, AllowedShares
+from app.models.animal import AnimalType, SheepGender
 
 
 class AnimalBase(BaseModel):
@@ -10,8 +10,6 @@ class AnimalBase(BaseModel):
     animal_type: AnimalType = Field(..., description="Type of animal (sheep, chicken, hive)")
     sheep_gender: Optional[SheepGender] = Field(None, description="Gender for sheep (ewe or ram)")
     birth_date: Optional[datetime] = None
-    is_sellable: bool = Field(False, description="Whether this animal is available for share purchase")
-    allowed_shares: Optional[AllowedShares] = Field(None, description="Allowed share sizes (half or whole)")
     current_location_id: Optional[int] = None
     sire_id: Optional[int] = None
     dam_id: Optional[int] = None
@@ -29,8 +27,6 @@ class AnimalUpdate(BaseModel):
     animal_type: Optional[AnimalType] = None
     sheep_gender: Optional[SheepGender] = None
     birth_date: Optional[datetime] = None
-    is_sellable: Optional[bool] = None
-    allowed_shares: Optional[AllowedShares] = None
     current_location_id: Optional[int] = None
     sire_id: Optional[int] = None
     dam_id: Optional[int] = None

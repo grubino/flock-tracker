@@ -120,16 +120,11 @@ const AnimalDetail: React.FC = () => {
         </Text>
         <div className={styles.actions}>
           {isCustomer ? (
-            <>
-              <Button appearance="primary" size="large">
-                Buy Share
+            <RouterLink to="/" style={{ textDecoration: 'none' }}>
+              <Button appearance="secondary">
+                Back to Catalog
               </Button>
-              <RouterLink to="/" style={{ textDecoration: 'none' }}>
-                <Button appearance="secondary">
-                  Back to Catalog
-                </Button>
-              </RouterLink>
-            </>
+            </RouterLink>
           ) : (
             <>
               <RouterLink to={`/animals/${animal.id}/edit`} style={{ textDecoration: 'none' }}>
@@ -203,31 +198,6 @@ const AnimalDetail: React.FC = () => {
                   )}
                 </Text>
               </div>
-              {!isCustomer && (
-                <>
-                  <div className={styles.field}>
-                    <Text size={300} className={styles.label}>Available for Share Purchase</Text>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
-                      <Text size={400} className={styles.value}>
-                        {animal.is_sellable ? 'Yes' : 'No'}
-                      </Text>
-                      {animal.is_sellable && (
-                        <Badge appearance="filled" color="success">
-                          Sellable
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  {animal.is_sellable && animal.allowed_shares && (
-                    <div className={styles.field}>
-                      <Text size={300} className={styles.label}>Allowed Share Sizes</Text>
-                      <Text size={400} className={styles.value} style={{ textTransform: 'capitalize' }}>
-                        {animal.allowed_shares} Share
-                      </Text>
-                    </div>
-                  )}
-                </>
-              )}
             </div>
           </div>
 

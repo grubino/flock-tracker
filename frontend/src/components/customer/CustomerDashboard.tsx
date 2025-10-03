@@ -227,14 +227,11 @@ const CustomerDashboard: React.FC = () => {
                 </RouterLink>
 
                 <div style={{ display: 'flex', gap: tokens.spacingHorizontalM, marginTop: tokens.spacingVerticalM }}>
-                  <RouterLink to={`/animals/${animal.id}`} style={{ flex: 1, textDecoration: 'none' }}>
+                  <RouterLink to={`/animals/${animal.id}`} style={{ textDecoration: 'none', width: '100%' }}>
                     <Button appearance="secondary" style={{ width: '100%' }}>
                       View Details
                     </Button>
                   </RouterLink>
-                  <Button appearance="primary" style={{ flex: 1 }}>
-                    Buy Share
-                  </Button>
                 </div>
               </Card>
             );

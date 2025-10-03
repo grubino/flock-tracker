@@ -9,14 +9,12 @@ import {
   Label,
   Dropdown,
   Option,
-  Checkbox,
   makeStyles,
   tokens
 } from '@fluentui/react-components';
 import { animalsApi, locationsApi } from '../../services/api';
-import { AnimalType, SheepGender, ChickenGender, AllowedShares } from '../../types';
+import { AnimalType, SheepGender, ChickenGender } from '../../types';
 import type { AnimalCreateRequest, Animal } from '../../types';
-import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface AnimalFormProps {
   animal?: Animal;
@@ -57,7 +55,6 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
   const queryClient = useQueryClient();
   const { id } = useParams<{ id: string }>();
   const animalId = isEdit && id ? parseInt(id) : undefined;
-  const { canWrite } = useRoleAccess();
 
   const { data: fetchedAnimal } = useQuery({
     queryKey: ['animal', animalId],
@@ -74,8 +71,6 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
     sheep_gender: undefined,
     chicken_gender: undefined,
     birth_date: '',
-    is_sellable: false,
-    allowed_shares: undefined,
     current_location_id: undefined,
     sire_id: undefined,
     dam_id: undefined,
@@ -90,8 +85,6 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
         sheep_gender: currentAnimal.sheep_gender || undefined,
         chicken_gender: currentAnimal.chicken_gender || undefined,
         birth_date: currentAnimal.birth_date ? currentAnimal.birth_date.split('T')[0] : '',
-        is_sellable: currentAnimal.is_sellable || false,
-        allowed_shares: currentAnimal.allowed_shares || undefined,
         current_location_id: currentAnimal.current_location_id || undefined,
         sire_id: currentAnimal.sire_id || undefined,
         dam_id: currentAnimal.dam_id || undefined,
@@ -266,47 +259,6 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
               />
             </div>
           </div>
-
-          {canWrite && (
-            <div style={{ marginTop: tokens.spacingVerticalL }}>
-              <Text size={500} weight="semibold" style={{ marginBottom: tokens.spacingVerticalM, display: 'block' }}>
-                Share Sales Settings (User/Admin Only)
-              </Text>
-              <div className={styles.formGrid}>
-                <div className={styles.field}>
-                  <Checkbox
-                    id="is_sellable"
-                    label="Available for Share Purchase"
-                    checked={formData.is_sellable}
-                    onChange={(_, data) =>
-                      setFormData(prev => ({
-                        ...prev,
-                        is_sellable: data.checked === true,
-                        allowed_shares: data.checked ? prev.allowed_shares : undefined
-                      }))
-                    }
-                  />
-                </div>
-
-                {formData.is_sellable && (
-                  <div className={styles.field}>
-                    <Label htmlFor="allowed_shares" required>Allowed Share Sizes</Label>
-                    <Dropdown
-                      value={formData.allowed_shares || ''}
-                      selectedOptions={formData.allowed_shares ? [formData.allowed_shares] : []}
-                      onOptionSelect={(_, data) =>
-                        handleChange({ target: { name: 'allowed_shares', value: data.optionValue } } as any)
-                      }
-                      placeholder="Select allowed share sizes"
-                    >
-                      <Option value={AllowedShares.HALF}>Half Share</Option>
-                      <Option value={AllowedShares.WHOLE}>Whole Share</Option>
-                    </Dropdown>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           <div style={{ marginTop: tokens.spacingVerticalL }}>
             <Text size={500} weight="semibold" style={{ marginBottom: tokens.spacingVerticalM, display: 'block' }}>

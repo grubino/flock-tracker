@@ -14,11 +14,6 @@ export const ChickenGender = {
   ROOSTER: "rooster"
 } as const;
 
-export const AllowedShares = {
-  HALF: "half",
-  WHOLE: "whole"
-} as const;
-
 export const EventType = {
   DEWORMING: "deworming",
   DELICING: "delicing",
@@ -32,7 +27,6 @@ export const EventType = {
 export type AnimalType = typeof AnimalType[keyof typeof AnimalType];
 export type SheepGender = typeof SheepGender[keyof typeof SheepGender];
 export type ChickenGender = typeof ChickenGender[keyof typeof ChickenGender];
-export type AllowedShares = typeof AllowedShares[keyof typeof AllowedShares];
 export type EventType = typeof EventType[keyof typeof EventType];
 
 export interface Photograph {
@@ -53,8 +47,6 @@ export interface Animal {
   sheep_gender?: SheepGender;
   chicken_gender?: ChickenGender;
   birth_date?: string;
-  is_sellable: boolean;
-  allowed_shares?: AllowedShares;
   current_location_id?: number;
   sire_id?: number;
   dam_id?: number;
@@ -108,8 +100,6 @@ export interface AnimalCreateRequest {
   sheep_gender?: SheepGender;
   chicken_gender?: ChickenGender;
   birth_date?: string;
-  is_sellable?: boolean;
-  allowed_shares?: AllowedShares;
   current_location_id?: number;
   sire_id?: number;
   dam_id?: number;
