@@ -32,6 +32,8 @@ class Settings(BaseSettings):
 
     def get_cors_origins_list(self) -> List[str]:
         """Convert comma-separated CORS origins string to list"""
+        if self.cors_origins == "*":
+            return ["*"]
         return [origin.strip() for origin in self.cors_origins.split(',')]
 
 
