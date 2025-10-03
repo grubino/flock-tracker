@@ -1,10 +1,4 @@
 services:
-  # PostgreSQL Database
-  - type: pserv
-    name: flock-tracker-db
-    plan: starter  # Free tier available
-    ipAllowList: []  # Allow all IPs (or restrict as needed)
-
   # Redis for Celery
   - type: redis
     name: flock-tracker-redis
@@ -58,4 +52,3 @@ databases:
   - name: flock-tracker-db
     databaseName: flock_tracker
     user: flock_tracker_user
-    plan: starter  # Free tier available
