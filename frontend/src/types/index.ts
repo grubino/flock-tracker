@@ -24,10 +24,25 @@ export const EventType = {
   OTHER: "other"
 } as const;
 
+export const ExpenseCategory = {
+  FEED: "feed",
+  SEED: "seed",
+  MEDICATION: "medication",
+  VETERINARY: "veterinary",
+  INFRASTRUCTURE: "infrastructure",
+  EQUIPMENT: "equipment",
+  SUPPLIES: "supplies",
+  UTILITIES: "utilities",
+  LABOR: "labor",
+  MAINTENANCE: "maintenance",
+  OTHER: "other"
+} as const;
+
 export type AnimalType = typeof AnimalType[keyof typeof AnimalType];
 export type SheepGender = typeof SheepGender[keyof typeof SheepGender];
 export type ChickenGender = typeof ChickenGender[keyof typeof ChickenGender];
 export type EventType = typeof EventType[keyof typeof EventType];
+export type ExpenseCategory = typeof ExpenseCategory[keyof typeof ExpenseCategory];
 
 export interface Photograph {
   id: number;
@@ -118,4 +133,43 @@ export interface LocationCreateRequest {
   address?: string;
   paddock_name?: string;
   description?: string;
+}
+
+export interface Vendor {
+  id: number;
+  name: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface VendorCreateRequest {
+  name: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+}
+
+export interface Expense {
+  id: number;
+  category: ExpenseCategory;
+  amount: string;
+  description: string;
+  notes?: string;
+  expense_date: string;
+  vendor_id?: number;
+  vendor?: Vendor;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExpenseCreateRequest {
+  category: ExpenseCategory;
+  amount: string;
+  description: string;
+  notes?: string;
+  expense_date: string;
+  vendor_id?: number;
 }

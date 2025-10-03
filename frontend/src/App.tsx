@@ -13,6 +13,10 @@ import AnimalForm from './components/animals/AnimalForm';
 import AnimalDetail from './components/animals/AnimalDetail';
 import EventList from './components/events/EventList';
 import EventForm from './components/events/EventForm';
+import ExpenseList from './components/expenses/ExpenseList';
+import ExpenseForm from './components/expenses/ExpenseForm';
+import VendorList from './components/vendors/VendorList';
+import VendorForm from './components/vendors/VendorForm';
 import LocationList from './components/locations/LocationList';
 import LocationDetail from './components/locations/LocationDetail';
 import LocationForm from './components/locations/LocationForm';
@@ -172,6 +176,60 @@ function App() {
                       <RoleGuard minRole="user">
                         <Layout>
                           <EventForm isEdit />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/expenses" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <ExpenseList />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/expenses/new" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <ExpenseForm />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/expenses/:id/edit" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <ExpenseForm isEdit />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/vendors" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <VendorList />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/vendors/new" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <VendorForm />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/vendors/:id/edit" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <VendorForm isEdit />
                         </Layout>
                       </RoleGuard>
                     </ProtectedRoute>

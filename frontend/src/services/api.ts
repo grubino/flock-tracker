@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest } from '../types';
+import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -72,6 +72,33 @@ export const locationsApi = {
   create: (location: LocationCreateRequest) => api.post<Location>('/api/locations', location),
   update: (id: number, location: Partial<LocationCreateRequest>) => api.put<Location>(`/api/locations/${id}`, location),
   delete: (id: number) => api.delete(`/api/locations/${id}`),
+};
+
+export const expensesApi = {
+  getAll: (params?: {
+    category?: string;
+    start_date?: string;
+    end_date?: string;
+    vendor?: string;
+    skip?: number;
+    limit?: number;
+  }) => api.get<Expense[]>('/api/expenses', { params }),
+  getById: (id: number) => api.get<Expense>(`/api/expenses/${id}`),
+  create: (expense: ExpenseCreateRequest) => api.post<Expense>('/api/expenses', expense),
+  update: (id: number, expense: Partial<ExpenseCreateRequest>) => api.put<Expense>(`/api/expenses/${id}`, expense),
+  delete: (id: number) => api.delete(`/api/expenses/${id}`),
+};
+
+export const vendorsApi = {
+  getAll: (params?: {
+    search?: string;
+    skip?: number;
+    limit?: number;
+  }) => api.get<Vendor[]>('/api/vendors', { params }),
+  getById: (id: number) => api.get<Vendor>(`/api/vendors/${id}`),
+  create: (vendor: VendorCreateRequest) => api.post<Vendor>('/api/vendors', vendor),
+  update: (id: number, vendor: Partial<VendorCreateRequest>) => api.put<Vendor>(`/api/vendors/${id}`, vendor),
+  delete: (id: number) => api.delete(`/api/vendors/${id}`),
 };
 
 export default api;

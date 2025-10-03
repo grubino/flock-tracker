@@ -28,8 +28,8 @@ export type EventType = typeof EventType[keyof typeof EventType];
 export const EventType = {
   deworming: 'deworming',
   delicing: 'delicing',
+  mite_treatment: 'mite_treatment',
   lambing: 'lambing',
-  vaccination: 'vaccination',
   health_check: 'health_check',
   medication: 'medication',
   breeding: 'breeding',

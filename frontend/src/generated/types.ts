@@ -4,7 +4,207 @@
  */
 
 export interface paths {
-    "/api/animals/": {
+    "/api/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register
+         * @description Register a new user
+         */
+        post: operations["register_api_auth_register_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description Login with email and password
+         */
+        post: operations["login_api_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Users Me
+         * @description Get current user information
+         */
+        get: operations["read_users_me_api_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login For Access Token
+         * @description Login endpoint that returns just the token (for OAuth2 compatibility)
+         */
+        post: operations["login_for_access_token_api_auth_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Users
+         * @description List all users (admin only)
+         */
+        get: operations["list_users_api_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get User
+         * @description Get a specific user by ID (admin only)
+         */
+        get: operations["get_user_api_admin_users__user_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{user_id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update User Role
+         * @description Update a user's role (admin only)
+         */
+        patch: operations["update_user_role_api_admin_users__user_id__role_patch"];
+        trace?: never;
+    };
+    "/api/admin/users/{user_id}/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset User Password
+         * @description Reset a user's password (admin only)
+         */
+        post: operations["reset_user_password_api_admin_users__user_id__reset_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/users/{user_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Activate User
+         * @description Activate a user (admin only)
+         */
+        patch: operations["activate_user_api_admin_users__user_id__activate_patch"];
+        trace?: never;
+    };
+    "/api/admin/users/{user_id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Deactivate User
+         * @description Deactivate a user (admin only)
+         */
+        patch: operations["deactivate_user_api_admin_users__user_id__deactivate_patch"];
+        trace?: never;
+    };
+    "/api/animals": {
         parameters: {
             query?: never;
             header?: never;
@@ -15,13 +215,13 @@ export interface paths {
          * Read Animals
          * @description Get all animals with optional filtering
          */
-        get: operations["read_animals_api_animals__get"];
+        get: operations["read_animals_api_animals_get"];
         put?: never;
         /**
          * Create Animal
          * @description Create a new animal
          */
-        post: operations["create_animal_api_animals__post"];
+        post: operations["create_animal_api_animals_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -156,7 +356,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/events/": {
+    "/api/events": {
         parameters: {
             query?: never;
             header?: never;
@@ -167,13 +367,33 @@ export interface paths {
          * Read Events
          * @description Get all events with optional filtering
          */
-        get: operations["read_events_api_events__get"];
+        get: operations["read_events_api_events_get"];
         put?: never;
         /**
          * Create Event
          * @description Create a new event
          */
-        post: operations["create_event_api_events__post"];
+        post: operations["create_event_api_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/events/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Bulk Events
+         * @description Create multiple events at once
+         */
+        post: operations["create_bulk_events_api_events_bulk_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -348,7 +568,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/locations/": {
+    "/api/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Expenses
+         * @description Get all expenses with optional filtering
+         */
+        get: operations["list_expenses_api_expenses_get"];
+        put?: never;
+        /**
+         * Create Expense
+         * @description Create a new expense
+         */
+        post: operations["create_expense_api_expenses_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/expenses/{expense_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Expense
+         * @description Get a specific expense by ID
+         */
+        get: operations["get_expense_api_expenses__expense_id__get"];
+        /**
+         * Update Expense
+         * @description Update an existing expense
+         */
+        put: operations["update_expense_api_expenses__expense_id__put"];
+        post?: never;
+        /**
+         * Delete Expense
+         * @description Delete an expense
+         */
+        delete: operations["delete_expense_api_expenses__expense_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vendors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Vendors
+         * @description Get all vendors with optional filtering
+         */
+        get: operations["list_vendors_api_vendors_get"];
+        put?: never;
+        /**
+         * Create Vendor
+         * @description Create a new vendor
+         */
+        post: operations["create_vendor_api_vendors_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vendors/{vendor_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Vendor
+         * @description Get a specific vendor by ID
+         */
+        get: operations["get_vendor_api_vendors__vendor_id__get"];
+        /**
+         * Update Vendor
+         * @description Update an existing vendor
+         */
+        put: operations["update_vendor_api_vendors__vendor_id__put"];
+        post?: never;
+        /**
+         * Delete Vendor
+         * @description Delete a vendor
+         */
+        delete: operations["delete_vendor_api_vendors__vendor_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/locations": {
         parameters: {
             query?: never;
             header?: never;
@@ -359,13 +683,13 @@ export interface paths {
          * Read Locations
          * @description Get all locations
          */
-        get: operations["read_locations_api_locations__get"];
+        get: operations["read_locations_api_locations_get"];
         put?: never;
         /**
          * Create Location
          * @description Create a new location
          */
-        post: operations["create_location_api_locations__post"];
+        post: operations["create_location_api_locations_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -628,7 +952,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/": {
+    "/api": {
         parameters: {
             query?: never;
             header?: never;
@@ -636,10 +960,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Root
-         * @description Root endpoint with API information
+         * Api Info
+         * @description API information endpoint
          */
-        get: operations["root__get"];
+        get: operations["api_info_api_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -668,7 +992,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api": {
+    "/": {
         parameters: {
             query?: never;
             header?: never;
@@ -676,10 +1000,30 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Api Info
-         * @description API information endpoint
+         * Serve Frontend
+         * @description Serve the React frontend
          */
-        get: operations["api_info_api_get"];
+        get: operations["serve_frontend__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/{full_path}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serve Spa
+         * @description Serve React app for all non-API routes (SPA routing)
+         */
+        get: operations["serve_spa__full_path__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -692,6 +1036,25 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AdminUserResponse */
+        AdminUserResponse: {
+            /** Id */
+            id: number;
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Name */
+            name: string;
+            role: components["schemas"]["UserRole"];
+            /** Provider */
+            provider: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Is Verified */
+            is_verified: boolean;
+        };
         /**
          * Animal
          * @description Schema for returning animal data
@@ -832,6 +1195,11 @@ export interface components {
             current_location?: components["schemas"]["LocationBrief"] | null;
             sire?: components["schemas"]["AnimalBrief"] | null;
             dam?: components["schemas"]["AnimalBrief"] | null;
+            /**
+             * Photographs
+             * @default []
+             */
+            photographs: components["schemas"]["PhotographBrief"][];
         };
         /**
          * AnimalWithLocation
@@ -870,6 +1238,12 @@ export interface components {
              */
             updated_at: string;
             current_location?: components["schemas"]["LocationBrief"] | null;
+        };
+        /** AuthResponse */
+        AuthResponse: {
+            user: components["schemas"]["UserResponse"];
+            /** Token */
+            token: string;
         };
         /** Body_upload_photograph_api_photographs_upload__animal_id__post */
         Body_upload_photograph_api_photographs_upload__animal_id__post: {
@@ -950,6 +1324,17 @@ export interface components {
             updated_at: string;
         };
         /**
+         * EventBulkCreate
+         * @description Schema for creating multiple events at once
+         */
+        EventBulkCreate: {
+            /**
+             * Events
+             * @description List of events to create
+             */
+            events: components["schemas"]["EventCreate"][];
+        };
+        /**
          * EventCreate
          * @description Schema for creating a new event
          */
@@ -1002,7 +1387,7 @@ export interface components {
          * EventType
          * @enum {string}
          */
-        EventType: "deworming" | "delicing" | "lambing" | "vaccination" | "health_check" | "medication" | "breeding" | "birth" | "death" | "injury" | "treatment" | "other";
+        EventType: "deworming" | "delicing" | "mite_treatment" | "lambing" | "health_check" | "medication" | "breeding" | "birth" | "death" | "injury" | "treatment" | "other";
         /**
          * EventUpdate
          * @description Schema for updating an existing event
@@ -1086,6 +1471,72 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * ExpenseCategory
+         * @enum {string}
+         */
+        ExpenseCategory: "feed" | "seed" | "medication" | "veterinary" | "infrastructure" | "equipment" | "supplies" | "utilities" | "labor" | "maintenance" | "other";
+        /** ExpenseCreate */
+        ExpenseCreate: {
+            category: components["schemas"]["ExpenseCategory"];
+            /** Amount */
+            amount: number | string;
+            /** Description */
+            description: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Expense Date
+             * Format: date-time
+             */
+            expense_date: string;
+            /** Vendor Id */
+            vendor_id?: number | null;
+        };
+        /** ExpenseResponse */
+        ExpenseResponse: {
+            category: components["schemas"]["ExpenseCategory"];
+            /** Amount */
+            amount: string;
+            /** Description */
+            description: string;
+            /** Notes */
+            notes?: string | null;
+            /**
+             * Expense Date
+             * Format: date-time
+             */
+            expense_date: string;
+            /** Vendor Id */
+            vendor_id?: number | null;
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            vendor?: components["schemas"]["VendorResponse"] | null;
+        };
+        /** ExpenseUpdate */
+        ExpenseUpdate: {
+            category?: components["schemas"]["ExpenseCategory"] | null;
+            /** Amount */
+            amount?: (number | string) | null;
+            /** Description */
+            description?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Expense Date */
+            expense_date?: string | null;
+            /** Vendor Id */
+            vendor_id?: number | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1364,6 +1815,26 @@ export interface components {
             updated_at: string;
         };
         /**
+         * PhotographBrief
+         * @description Brief photograph info for nested responses
+         */
+        PhotographBrief: {
+            /** Id */
+            id: number;
+            /** Filename */
+            filename: string;
+            /** File Path */
+            file_path: string;
+            /** Caption */
+            caption?: string | null;
+            /** Is Primary */
+            is_primary: boolean;
+            /** Width */
+            width?: number | null;
+            /** Height */
+            height?: number | null;
+        };
+        /**
          * PhotographUpdate
          * @description Schema for updating photograph metadata
          */
@@ -1389,11 +1860,90 @@ export interface components {
              */
             message: string;
         };
+        /** ResetUserPassword */
+        ResetUserPassword: {
+            /** New Password */
+            new_password: string;
+        };
         /**
          * SheepGender
          * @enum {string}
          */
         SheepGender: "ewe" | "ram";
+        /** Token */
+        Token: {
+            /** Access Token */
+            access_token: string;
+            /** Token Type */
+            token_type: string;
+        };
+        /** UpdateUserRole */
+        UpdateUserRole: {
+            role: components["schemas"]["UserRole"];
+        };
+        /** UserCreate */
+        UserCreate: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Name */
+            name: string;
+            /** Picture */
+            picture?: string | null;
+            /** @default customer */
+            role: components["schemas"]["UserRole"];
+            /** Password */
+            password: string;
+        };
+        /** UserLogin */
+        UserLogin: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Password */
+            password: string;
+        };
+        /** UserResponse */
+        UserResponse: {
+            /**
+             * Email
+             * Format: email
+             */
+            email: string;
+            /** Name */
+            name: string;
+            /** Picture */
+            picture?: string | null;
+            /** @default customer */
+            role: components["schemas"]["UserRole"];
+            /** Id */
+            id: number;
+            /** Provider */
+            provider: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Is Verified */
+            is_verified: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * UserRole
+         * @enum {string}
+         */
+        UserRole: "customer" | "user" | "admin";
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1402,6 +1952,51 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VendorCreate */
+        VendorCreate: {
+            /** Name */
+            name: string;
+            /** Address */
+            address?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Website */
+            website?: string | null;
+        };
+        /** VendorResponse */
+        VendorResponse: {
+            /** Name */
+            name: string;
+            /** Address */
+            address?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Website */
+            website?: string | null;
+            /** Id */
+            id: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** VendorUpdate */
+        VendorUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Address */
+            address?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Website */
+            website?: string | null;
         };
     };
     responses: never;
@@ -1412,7 +2007,391 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    read_animals_api_animals__get: {
+    register_api_auth_register_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_users_me_api_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserResponse"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    login_for_access_token_api_auth_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Token"];
+                };
+            };
+            /** @description Not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_api_admin_users_get: {
+        parameters: {
+            query?: {
+                skip?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponse"][];
+                };
+            };
+            /** @description Not authorized */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_user_api_admin_users__user_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponse"];
+                };
+            };
+            /** @description Not authorized */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_role_api_admin_users__user_id__role_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserRole"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponse"];
+                };
+            };
+            /** @description Not authorized */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_user_password_api_admin_users__user_id__reset_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResetUserPassword"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponse"];
+                };
+            };
+            /** @description Not authorized */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    activate_user_api_admin_users__user_id__activate_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponse"];
+                };
+            };
+            /** @description Not authorized */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    deactivate_user_api_admin_users__user_id__deactivate_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUserResponse"];
+                };
+            };
+            /** @description Not authorized */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_animals_api_animals_get: {
         parameters: {
             query?: {
                 /** @description Number of records to skip */
@@ -1450,7 +2429,7 @@ export interface operations {
             };
         };
     };
-    create_animal_api_animals__post: {
+    create_animal_api_animals_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1738,7 +2717,7 @@ export interface operations {
             };
         };
     };
-    read_events_api_events__get: {
+    read_events_api_events_get: {
         parameters: {
             query?: {
                 /** @description Number of records to skip */
@@ -1780,7 +2759,7 @@ export interface operations {
             };
         };
     };
-    create_event_api_events__post: {
+    create_event_api_events_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1800,6 +2779,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Event"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_bulk_events_api_events_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EventBulkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Event"][];
                 };
             };
             /** @description Validation Error */
@@ -2118,7 +3130,345 @@ export interface operations {
             };
         };
     };
-    read_locations_api_locations__get: {
+    list_expenses_api_expenses_get: {
+        parameters: {
+            query?: {
+                /** @description Number of records to skip */
+                skip?: number;
+                /** @description Maximum number of records to return */
+                limit?: number;
+                /** @description Filter by expense category */
+                category?: components["schemas"]["ExpenseCategory"] | null;
+                /** @description Filter expenses from this date */
+                start_date?: string | null;
+                /** @description Filter expenses until this date */
+                end_date?: string | null;
+                /** @description Filter by vendor name */
+                vendor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_expense_api_expenses_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpenseCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_expense_api_expenses__expense_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expense_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_expense_api_expenses__expense_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expense_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExpenseUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_expense_api_expenses__expense_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                expense_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_vendors_api_vendors_get: {
+        parameters: {
+            query?: {
+                /** @description Number of records to skip */
+                skip?: number;
+                /** @description Maximum number of records to return */
+                limit?: number;
+                /** @description Search by vendor name */
+                search?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VendorResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_vendor_api_vendors_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VendorCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VendorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_vendor_api_vendors__vendor_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vendor_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VendorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_vendor_api_vendors__vendor_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vendor_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VendorUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VendorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_vendor_api_vendors__vendor_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vendor_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_locations_api_locations_get: {
         parameters: {
             query?: {
                 /** @description Number of records to skip */
@@ -2152,7 +3502,7 @@ export interface operations {
             };
         };
     };
-    create_location_api_locations__post: {
+    create_location_api_locations_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -2689,7 +4039,7 @@ export interface operations {
             };
         };
     };
-    root__get: {
+    api_info_api_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2729,7 +4079,7 @@ export interface operations {
             };
         };
     };
-    api_info_api_get: {
+    serve_frontend__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -2743,8 +4093,35 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
+                content?: never;
+            };
+        };
+    };
+    serve_spa__full_path__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                full_path: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

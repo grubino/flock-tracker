@@ -30,6 +30,7 @@ import type { AnimalWithDetailsDamId } from './animalWithDetailsDamId';
 import type { AnimalWithDetailsCurrentLocation } from './animalWithDetailsCurrentLocation';
 import type { AnimalWithDetailsSire } from './animalWithDetailsSire';
 import type { AnimalWithDetailsDam } from './animalWithDetailsDam';
+import type { PhotographBrief } from './photographBrief';
 
 /**
  * Schema for animal with all related data
@@ -52,4 +53,5 @@ export interface AnimalWithDetails {
   current_location?: AnimalWithDetailsCurrentLocation;
   sire?: AnimalWithDetailsSire;
   dam?: AnimalWithDetailsDam;
+  photographs?: PhotographBrief[];
 }
