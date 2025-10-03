@@ -25,7 +25,7 @@ import {
 } from '@fluentui/react-components';
 import { MoreHorizontal24Regular, Add24Regular } from '@fluentui/react-icons';
 import { expensesApi } from '../../services/api';
-import { ExpenseCategory, type Expense } from '../../types';
+import { ExpenseCategory } from '../../types';
 
 const useStyles = makeStyles({
   container: {
