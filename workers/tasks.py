@@ -1,4 +1,5 @@
 from workers.celery_app import celery_app
+from backend.app.services.ocr_layout_service import OCRLayoutService
 from backend.app.services.ocr_service import OCRService
 from backend.app.database.database import SessionLocal
 from backend.app.models.receipt import Receipt
@@ -53,7 +54,7 @@ def process_receipt_ocr(self, receipt_id: int):
         known_vendor_names = [v.name for v in vendors]
 
         # Parse receipt data
-        extracted_data = OCRService.parse_receipt(raw_text, known_vendor_names)
+        extracted_data = OCRLayoutService.parse_receipt_with_layout(receipt.file_path, receipt.file_type, known_vendor_names)
 
         # Update receipt with OCR results
         receipt.raw_text = raw_text
