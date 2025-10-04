@@ -84,8 +84,17 @@ async def upload_receipt(
 
     # Save file
     try:
+        # Ensure directory exists
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+
+        # Verify file was saved
+        if not os.path.exists(file_path):
+            raise Exception(f"File was not saved successfully at {file_path}")
+
+        print(f"✓ File saved: {file_path} (size: {os.path.getsize(file_path)} bytes)")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

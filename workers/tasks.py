@@ -45,6 +45,14 @@ def process_receipt_ocr(self, receipt_id: int):
 
         # Verify file exists
         if not os.path.exists(receipt.file_path):
+            # Debug: List files in upload directory
+            upload_dir = os.path.dirname(receipt.file_path)
+            if os.path.exists(upload_dir):
+                files = os.listdir(upload_dir)
+                print(f"✗ File not found: {receipt.file_path}")
+                print(f"  Files in {upload_dir}: {files[:10]}")  # Show first 10 files
+            else:
+                print(f"✗ Upload directory doesn't exist: {upload_dir}")
             raise FileNotFoundError(f"Receipt file not found: {receipt.file_path}")
 
         # Get OCR engine configuration
