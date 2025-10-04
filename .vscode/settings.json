@@ -1,0 +1,34 @@
+{
+    "python.testing.pytestEnabled": true,
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestArgs": [
+        "backend/tests"
+    ],
+    "python.testing.cwd": "${workspaceFolder}/backend",
+    "python.envFile": "${workspaceFolder}/backend/.env",
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/bin/python",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}/backend"
+    ],
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        "**/.pytest_cache": true,
+        "**/htmlcov": true,
+        "**/.coverage": true
+    },
+    "coverage-gutters.coverageFileNames": [
+        "backend/coverage.xml",
+        "coverage.xml"
+    ]
+}

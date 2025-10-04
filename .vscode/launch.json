@@ -1,0 +1,127 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Run All Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${workspaceFolder}/backend/tests",
+                "-v"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend"
+            }
+        },
+        {
+            "name": "Python: Run Current Test File",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${file}",
+                "-v"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend"
+            }
+        },
+        {
+            "name": "Python: Run All Tests with Coverage",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${workspaceFolder}/backend/tests",
+                "--cov=app",
+                "--cov-report=html",
+                "--cov-report=term-missing",
+                "-v"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend"
+            }
+        },
+        {
+            "name": "Python: Run OCR Tests Only",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${workspaceFolder}/backend/tests/test_services",
+                "-k",
+                "ocr",
+                "-v"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend"
+            }
+        },
+        {
+            "name": "Python: Debug Specific Test",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${workspaceFolder}/backend/tests/test_services/test_ocr_service.py::TestOCRService::test_parse_receipt_complete",
+                "-v",
+                "-s"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend"
+            }
+        },
+        {
+            "name": "Python: Run Integration Tests",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${workspaceFolder}/backend/tests/test_services/test_ocr_integration.py",
+                "-v"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend"
+            }
+        },
+        {
+            "name": "Python: FastAPI Backend",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--reload",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000"
+            ],
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend"
+            }
+        }
+    ]
+}

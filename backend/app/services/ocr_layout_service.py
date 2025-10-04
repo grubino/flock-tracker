@@ -29,29 +29,67 @@ class OCRLayoutService:
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
 
+        # Preprocess image for better OCR
+        from PIL import ImageEnhance, ImageFilter
+
+        # Upscale if image is small (improves OCR on low-res receipts)
+        width, height = image.size
+        if width < 1000:
+            scale_factor = 1000 / width
+            new_size = (int(width * scale_factor), int(height * scale_factor))
+            image = image.resize(new_size, Image.LANCZOS)
+
+        # Convert to grayscale
+        image = image.convert('L')
+
+        # Enhance contrast
+        enhancer = ImageEnhance.Contrast(image)
+        image = enhancer.enhance(2.0)
+
+        # Enhance sharpness
+        enhancer = ImageEnhance.Sharpness(image)
+        image = enhancer.enhance(1.5)
+
+        # Apply slight blur to reduce noise, then sharpen
+        image = image.filter(ImageFilter.MedianFilter(size=3))
+
         # Get detailed layout data as DataFrame
-        # PSM 6 = Assume uniform block of text (good for receipts)
-        data = pytesseract.image_to_data(
-            image,
-            output_type=pytesseract.Output.DATAFRAME,
-            config='--psm 6'
-        )
+        # PSM 11 = Sparse text (better for receipts with varied formatting)
+        # Try PSM 11 first, fallback to PSM 6 if it fails
+        try:
+            data = pytesseract.image_to_data(
+                image,
+                output_type=pytesseract.Output.DATAFRAME,
+                config='--psm 11'
+            )
+        except:
+            # Fallback to PSM 6
+            data = pytesseract.image_to_data(
+                image,
+                output_type=pytesseract.Output.DATAFRAME,
+                config='--psm 6'
+            )
 
         # Filter out empty text and low confidence
         data = data[data['text'].notna()]
-        data = data[data['conf'] > 30]  # Only keep confident detections
+        data = data[data['conf'] > 0]  # Keep all detections with any confidence
+        data = data[data['conf'] != -1]  # Remove invalid confidence scores
 
         return data
 
     @staticmethod
-    def group_by_lines(df: pd.DataFrame) -> List[Dict]:
+    def group_by_lines(df: pd.DataFrame, vertical_threshold: int = 10) -> List[Dict]:
         """
         Group words into lines based on layout data
         Returns list of lines with their text and bounding boxes
+
+        Args:
+            df: DataFrame with OCR layout data
+            vertical_threshold: Max pixel difference to consider words on same line (default: 10)
         """
         lines = []
 
-        # Group by line_num
+        # Group by line_num first
         for (block, par, line), group in df.groupby(['block_num', 'par_num', 'line_num']):
             if len(group) == 0:
                 continue
@@ -71,7 +109,52 @@ class OCRLayoutService:
         # Sort by vertical position (top to bottom)
         lines.sort(key=lambda x: x['top'])
 
-        return lines
+        # Merge lines that are vertically aligned (within threshold)
+        # This handles cases where Tesseract splits text on the same line
+        merged_lines = []
+        i = 0
+        while i < len(lines):
+            current_line = lines[i]
+
+            # Look ahead to see if next line should be merged
+            j = i + 1
+            while j < len(lines):
+                next_line = lines[j]
+
+                # Check if lines are vertically aligned (similar top position)
+                top_diff = abs(current_line['top'] - next_line['top'])
+
+                if top_diff <= vertical_threshold:
+                    # Merge the lines
+                    # Combine text (sort by horizontal position)
+                    if next_line['left'] < current_line['left']:
+                        # Next line is to the left, prepend it
+                        current_line['text'] = next_line['text'] + ' ' + current_line['text']
+                    else:
+                        # Next line is to the right, append it
+                        current_line['text'] = current_line['text'] + ' ' + next_line['text']
+
+                    # Update bounding box
+                    current_line['left'] = min(current_line['left'], next_line['left'])
+                    current_line['top'] = min(current_line['top'], next_line['top'])
+                    current_line['right'] = max(current_line['right'], next_line['right'])
+                    current_line['bottom'] = max(current_line['bottom'], next_line['bottom'])
+
+                    # Average confidence
+                    current_line['confidence'] = (current_line['confidence'] + next_line['confidence']) / 2
+
+                    # Merge words lists
+                    current_line['words'].extend(next_line['words'])
+
+                    j += 1
+                else:
+                    # Lines are too far apart vertically, stop merging
+                    break
+
+            merged_lines.append(current_line)
+            i = j if j > i + 1 else i + 1
+
+        return merged_lines
 
     @staticmethod
     def detect_columns(lines: List[Dict], threshold: int = 50) -> Dict[str, List[Dict]]:
