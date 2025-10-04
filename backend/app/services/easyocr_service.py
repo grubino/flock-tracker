@@ -21,13 +21,33 @@ class EasyOCRService:
         return cls._reader
 
     @staticmethod
-    def extract_text_from_image(image_path: str, gpu: bool = False) -> str:
-        """Extract text from an image file using EasyOCR"""
+    def extract_text_from_image(
+        image_path: str,
+        gpu: bool = False,
+        paragraph: bool = True,
+        x_ths: float = 1.0,
+        y_ths: float = 0.5
+    ) -> str:
+        """
+        Extract text from an image file using EasyOCR
+
+        Args:
+            image_path: Path to image file
+            gpu: Use GPU acceleration
+            paragraph: Enable paragraph detection for better layout
+            x_ths: Horizontal threshold for paragraph grouping (higher = more aggressive horizontal grouping)
+            y_ths: Vertical threshold for paragraph grouping (higher = more aggressive vertical grouping)
+        """
         try:
             reader = EasyOCRService.get_reader(gpu=gpu)
 
-            # Read text from image
-            result = reader.readtext(image_path)
+            # Read text from image with paragraph detection
+            result = reader.readtext(
+                image_path,
+                paragraph=paragraph,
+                x_ths=x_ths,
+                y_ths=y_ths
+            )
 
             # Extract just the text (result is list of (bbox, text, confidence))
             text_lines = [detection[1] for detection in result]
@@ -44,10 +64,21 @@ class EasyOCRService:
     def extract_text_from_image_with_confidence(
         image_path: str,
         gpu: bool = False,
-        min_confidence: float = 0.0
+        min_confidence: float = 0.0,
+        paragraph: bool = True,
+        x_ths: float = 1.0,
+        y_ths: float = 0.5
     ) -> Dict:
         """
-        Extract text with detailed confidence scores
+        Extract text with detailed confidence scores and layout information
+
+        Args:
+            image_path: Path to image file
+            gpu: Use GPU acceleration
+            min_confidence: Minimum confidence threshold (0.0-1.0)
+            paragraph: Enable paragraph detection for better layout
+            x_ths: Horizontal threshold for paragraph grouping
+            y_ths: Vertical threshold for paragraph grouping
 
         Returns:
             Dict with 'text', 'lines' (with confidence), and 'avg_confidence'
@@ -55,8 +86,13 @@ class EasyOCRService:
         try:
             reader = EasyOCRService.get_reader(gpu=gpu)
 
-            # Read text from image
-            result = reader.readtext(image_path)
+            # Read text from image with paragraph detection
+            result = reader.readtext(
+                image_path,
+                paragraph=paragraph,
+                x_ths=x_ths,
+                y_ths=y_ths
+            )
 
             # Filter by confidence and extract lines
             lines = []
@@ -84,8 +120,23 @@ class EasyOCRService:
             raise Exception(f"Error extracting text from image: {str(e)}")
 
     @staticmethod
-    def extract_text_from_pdf(pdf_path: str, gpu: bool = False) -> str:
-        """Extract text from a PDF file by converting to images first"""
+    def extract_text_from_pdf(
+        pdf_path: str,
+        gpu: bool = False,
+        paragraph: bool = True,
+        x_ths: float = 1.0,
+        y_ths: float = 0.5
+    ) -> str:
+        """
+        Extract text from a PDF file by converting to images first
+
+        Args:
+            pdf_path: Path to PDF file
+            gpu: Use GPU acceleration
+            paragraph: Enable paragraph detection
+            x_ths: Horizontal threshold for paragraph grouping
+            y_ths: Vertical threshold for paragraph grouping
+        """
         try:
             # Convert PDF to images
             images = convert_from_path(pdf_path)
@@ -98,7 +149,12 @@ class EasyOCRService:
                 # Convert PIL image to numpy array for EasyOCR
                 img_array = np.array(image)
 
-                result = reader.readtext(img_array)
+                result = reader.readtext(
+                    img_array,
+                    paragraph=paragraph,
+                    x_ths=x_ths,
+                    y_ths=y_ths
+                )
                 text_lines = [detection[1] for detection in result]
                 text = '\n'.join(text_lines)
 
@@ -124,18 +180,35 @@ class EasyOCRService:
     def extract_structured_data(
         image_path: str,
         known_vendors: List[str] = [],
-        gpu: bool = False
+        gpu: bool = False,
+        paragraph: bool = True,
+        x_ths: float = 1.0,
+        y_ths: float = 0.5
     ) -> Dict:
         """
         Extract structured receipt data using EasyOCR with layout information
 
-        Returns parsed receipt with vendor, items, total, date, and confidence
+        Args:
+            image_path: Path to receipt image
+            known_vendors: List of known vendor names for matching
+            gpu: Use GPU acceleration
+            paragraph: Enable paragraph detection for better layout preservation
+            x_ths: Horizontal threshold (1.0 default - receipts often have items on same line)
+            y_ths: Vertical threshold (0.5 default - keep lines separate)
+
+        Returns:
+            Dict with parsed receipt data: vendor, items, total, date, confidence
         """
         try:
             reader = EasyOCRService.get_reader(gpu=gpu)
 
-            # Read text with bounding boxes
-            result = reader.readtext(image_path)
+            # Read text with bounding boxes and paragraph detection
+            result = reader.readtext(
+                image_path,
+                paragraph=paragraph,
+                x_ths=x_ths,
+                y_ths=y_ths
+            )
 
             if not result:
                 return {
@@ -146,15 +219,28 @@ class EasyOCRService:
                     'confidence': 0
                 }
 
+            # Normalize result format - handle both (bbox, text) and (bbox, text, conf) formats
+            normalized_result = []
+            for item in result:
+                if len(item) == 2:
+                    # Format: (bbox, text) - no confidence
+                    bbox, text = item
+                    normalized_result.append((bbox, text, 1.0))  # Default confidence
+                elif len(item) == 3:
+                    # Format: (bbox, text, confidence)
+                    normalized_result.append(item)
+                else:
+                    continue  # Skip malformed items
+
             # Sort by vertical position (top to bottom)
-            result_sorted = sorted(result, key=lambda x: x[0][0][1])  # Sort by top-left y coordinate
+            result_sorted = sorted(normalized_result, key=lambda x: x[0][0][1])  # Sort by top-left y coordinate
 
             # Build full text for general extraction
             full_text = '\n'.join([detection[1] for detection in result_sorted])
             full_text = OCRNLPUtils.clean_ocr_text(full_text)
 
             # Get header (top 30%)
-            image_height = max(bbox[0][1] for bbox, _, _ in result)
+            image_height = max(bbox[0][1] for bbox, _, _ in result_sorted)
             header_threshold = image_height * 0.3
             header_lines = [text for bbox, text, conf in result_sorted if bbox[0][1] < header_threshold]
             header_text = '\n'.join(header_lines)
@@ -189,7 +275,7 @@ class EasyOCRService:
             date = OCRService.extract_date(full_text)
 
             # Calculate average confidence
-            avg_confidence = sum(conf for _, _, conf in result) / len(result) if result else 0
+            avg_confidence = sum(conf for _, _, conf in result_sorted) / len(result_sorted) if result_sorted else 0
 
             return {
                 'vendor': vendor,

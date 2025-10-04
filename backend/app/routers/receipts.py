@@ -12,13 +12,25 @@ from app.schemas.receipt import ReceiptResponse, OCRResult
 from app.routers.auth import get_current_active_user
 from app.models.user import User
 
-# Import Celery task
-try:
-    from workers.tasks import process_receipt_ocr
-    CELERY_AVAILABLE = True
-except ImportError:
-    CELERY_AVAILABLE = False
-    # Fallback to synchronous processing if Celery not available
+# Initialize Celery client (don't import worker tasks)
+from celery import Celery
+import os
+
+REDIS_URL = os.getenv('REDIS_URL')
+CELERY_AVAILABLE = bool(REDIS_URL)
+
+if CELERY_AVAILABLE:
+    # Create Celery client to send tasks (not execute them)
+    celery_app = Celery(
+        'flock_tracker_api',
+        broker=REDIS_URL,
+        backend=REDIS_URL
+    )
+    print(f"✓ Celery client initialized with broker: {REDIS_URL[:20]}...")
+else:
+    celery_app = None
+    print("✗ REDIS_URL not set - Celery unavailable, will use synchronous processing")
+    # Import services for fallback
     from app.services.ocr_service import OCRService
     from app.services.easyocr_service import EasyOCRService
 
@@ -83,6 +95,40 @@ async def upload_receipt(
     return receipt
 
 
+@router.get("/celery-status")
+async def celery_status(current_user: User = Depends(get_current_active_user)):
+    """Check if Celery is available and connected"""
+    if not CELERY_AVAILABLE:
+        return {
+            "available": False,
+            "message": "REDIS_URL not configured"
+        }
+
+    try:
+        # Try to inspect workers
+        i = celery_app.control.inspect()
+        stats = i.stats()
+
+        if stats:
+            return {
+                "available": True,
+                "workers_online": len(stats),
+                "workers": list(stats.keys())
+            }
+        else:
+            return {
+                "available": True,
+                "workers_online": 0,
+                "message": "No workers are currently running"
+            }
+    except Exception as e:
+        return {
+            "available": True,
+            "error": str(e),
+            "message": "Celery client initialized but cannot connect to broker/workers"
+        }
+
+
 @router.post("/{receipt_id}/process")
 async def process_receipt(
     receipt_id: int,
@@ -108,8 +154,8 @@ async def process_receipt(
 
     try:
         if CELERY_AVAILABLE:
-            # Queue OCR processing task
-            task = process_receipt_ocr.delay(receipt_id)
+            # Queue OCR processing task by name (worker will handle it)
+            task = celery_app.send_task('workers.tasks.process_receipt_ocr', args=[receipt_id])
             return {
                 'status': 'processing',
                 'task_id': task.id,
@@ -120,6 +166,8 @@ async def process_receipt(
             import os
             ocr_engine = os.getenv('OCR_ENGINE', 'easyocr').lower()
             use_gpu = os.getenv('OCR_USE_GPU', 'false').lower() == 'true'
+            x_ths = float(os.getenv('OCR_X_THS', '1.0'))
+            y_ths = float(os.getenv('OCR_Y_THS', '0.5'))
 
             vendors = db.query(Vendor).all()
             known_vendor_names = [v.name for v in vendors]
@@ -129,7 +177,10 @@ async def process_receipt(
                 extracted_data = EasyOCRService.extract_structured_data(
                     receipt.file_path,
                     known_vendors=known_vendor_names,
-                    gpu=use_gpu
+                    gpu=use_gpu,
+                    paragraph=True,
+                    x_ths=x_ths,
+                    y_ths=y_ths
                 )
                 raw_text = extracted_data.pop('raw_text', '')
             else:
@@ -170,7 +221,7 @@ async def get_task_status(
         )
 
     from celery.result import AsyncResult
-    task = AsyncResult(task_id, app=process_receipt_ocr.app)
+    task = AsyncResult(task_id, app=celery_app)
 
     if task.state == 'PENDING':
         return {

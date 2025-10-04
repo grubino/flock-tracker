@@ -50,6 +50,8 @@ def process_receipt_ocr(self, receipt_id: int):
         # Get OCR engine configuration
         ocr_engine = os.getenv('OCR_ENGINE', 'easyocr').lower()
         use_gpu = os.getenv('OCR_USE_GPU', 'false').lower() == 'true'
+        x_ths = float(os.getenv('OCR_X_THS', '1.0'))
+        y_ths = float(os.getenv('OCR_Y_THS', '0.5'))
 
         # Get known vendors for better matching
         vendors = db.query(Vendor).all()
@@ -61,7 +63,10 @@ def process_receipt_ocr(self, receipt_id: int):
             extracted_data = EasyOCRService.extract_structured_data(
                 receipt.file_path,
                 known_vendors=known_vendor_names,
-                gpu=use_gpu
+                gpu=use_gpu,
+                paragraph=True,
+                x_ths=x_ths,
+                y_ths=y_ths
             )
             raw_text = extracted_data.pop('raw_text', '')
         else:
