@@ -18,8 +18,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy workers code
 COPY workers/ ./workers/
 
-# Copy backend code directly as 'app' (not 'backend/app')
-COPY backend/app ./app
+# Copy backend directory to preserve import structure
+COPY backend/ ./backend/
 
 # Set Python path
 ENV PYTHONPATH=/app
