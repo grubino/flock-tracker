@@ -30,11 +30,10 @@ def process_receipt_ocr(self, receipt_id: int):
 
         # Check if already processed
         if receipt.raw_text:
-            return {
-                'status': 'completed',
-                'raw_text': receipt.raw_text,
-                **receipt.extracted_data if receipt.extracted_data else {}
-            }
+            result = {'status': 'completed', 'raw_text': receipt.raw_text}
+            if receipt.extracted_data:
+                result.update(receipt.extracted_data)
+            return result
 
         # Update state
         self.update_state(state='PROCESSING', meta={'status': 'Extracting text from image...'})
@@ -61,11 +60,9 @@ def process_receipt_ocr(self, receipt_id: int):
         receipt.extracted_data = extracted_data
         db.commit()
 
-        return {
-            'status': 'completed',
-            'raw_text': raw_text,
-            **extracted_data
-        }
+        result = {'status': 'completed', 'raw_text': raw_text}
+        result.update(extracted_data)
+        return result
 
     except Exception as e:
         db.rollback()
