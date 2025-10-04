@@ -20,6 +20,7 @@ except ImportError:
     CELERY_AVAILABLE = False
     # Fallback to synchronous processing if Celery not available
     from app.services.ocr_service import OCRService
+    from app.services.easyocr_service import EasyOCRService
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
@@ -116,10 +117,25 @@ async def process_receipt(
             }
         else:
             # Fallback to synchronous processing
-            raw_text = OCRService.extract_text(receipt.file_path, receipt.file_type)
+            import os
+            ocr_engine = os.getenv('OCR_ENGINE', 'easyocr').lower()
+            use_gpu = os.getenv('OCR_USE_GPU', 'false').lower() == 'true'
+
             vendors = db.query(Vendor).all()
             known_vendor_names = [v.name for v in vendors]
-            extracted_data = OCRService.parse_receipt(raw_text, known_vendor_names)
+
+            if ocr_engine == 'easyocr':
+                # Use EasyOCR
+                extracted_data = EasyOCRService.extract_structured_data(
+                    receipt.file_path,
+                    known_vendors=known_vendor_names,
+                    gpu=use_gpu
+                )
+                raw_text = extracted_data.pop('raw_text', '')
+            else:
+                # Use Tesseract
+                raw_text = OCRService.extract_text(receipt.file_path, receipt.file_type)
+                extracted_data = OCRService.parse_receipt(raw_text, known_vendor_names)
 
             receipt.raw_text = raw_text
             receipt.extracted_data = extracted_data

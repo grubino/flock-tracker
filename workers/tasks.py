@@ -1,10 +1,14 @@
 from workers.celery_app import celery_app
 from app.services.ocr_layout_service import OCRLayoutService
 from app.services.ocr_service import OCRService
+from app.services.easyocr_service import EasyOCRService
 from app.database.database import SessionLocal
 from app.models.receipt import Receipt
 from app.models.vendor import Vendor
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 @celery_app.task(bind=True, name='workers.tasks.process_receipt_ocr')
@@ -43,18 +47,36 @@ def process_receipt_ocr(self, receipt_id: int):
         if not os.path.exists(receipt.file_path):
             raise FileNotFoundError(f"Receipt file not found: {receipt.file_path}")
 
-        # Extract text using OCR
-        raw_text = OCRService.extract_text(receipt.file_path, receipt.file_type)
-
-        # Update state
-        self.update_state(state='PROCESSING', meta={'status': 'Parsing receipt data...'})
+        # Get OCR engine configuration
+        ocr_engine = os.getenv('OCR_ENGINE', 'easyocr').lower()
+        use_gpu = os.getenv('OCR_USE_GPU', 'false').lower() == 'true'
 
         # Get known vendors for better matching
         vendors = db.query(Vendor).all()
         known_vendor_names = [v.name for v in vendors]
 
-        # Parse receipt data
-        extracted_data = OCRLayoutService.parse_receipt_with_layout(receipt.file_path, receipt.file_type, known_vendor_names)
+        # Use EasyOCR or Tesseract based on configuration
+        if ocr_engine == 'easyocr':
+            # Extract structured data directly with EasyOCR
+            extracted_data = EasyOCRService.extract_structured_data(
+                receipt.file_path,
+                known_vendors=known_vendor_names,
+                gpu=use_gpu
+            )
+            raw_text = extracted_data.pop('raw_text', '')
+        else:
+            # Use Tesseract with layout service
+            raw_text = OCRService.extract_text(receipt.file_path, receipt.file_type)
+
+            # Update state
+            self.update_state(state='PROCESSING', meta={'status': 'Parsing receipt data...'})
+
+            # Parse receipt data
+            extracted_data = OCRLayoutService.parse_receipt_with_layout(
+                receipt.file_path,
+                receipt.file_type,
+                known_vendor_names
+            )
 
         # Update receipt with OCR results
         receipt.raw_text = raw_text
