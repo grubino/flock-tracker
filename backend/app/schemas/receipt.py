@@ -9,12 +9,12 @@ class ReceiptBase(BaseModel):
 
 
 class ReceiptCreate(ReceiptBase):
-    file_path: str
+    file_path: Optional[str] = None
 
 
 class ReceiptResponse(ReceiptBase):
     id: int
-    file_path: str
+    file_path: Optional[str] = None  # Now optional - stored in database instead
     raw_text: Optional[str] = None
     extracted_data: Optional[Dict] = None
     expense_id: Optional[int] = None
