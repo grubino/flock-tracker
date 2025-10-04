@@ -29,12 +29,6 @@ services:
         sync: false  # Set this manually in Render dashboard
       - key: CORS_ORIGINS
         value: "*"  # Update with your frontend URL in production
-      - key: UPLOAD_DIR
-        value: "/data/uploads"
-    disk:
-      name: flock-tracker-uploads
-      mountPath: /data/uploads
-      sizeGB: 1
 
   # Celery Worker Service
   - type: worker
@@ -53,12 +47,6 @@ services:
           type: redis
           name: flock-tracker-redis
           property: connectionString
-      - key: UPLOAD_DIR
-        value: "/data/uploads"
-    disk:
-      name: flock-tracker-uploads
-      mountPath: /data/uploads
-      sizeGB: 1
 
 databases:
   - name: flock-tracker-db

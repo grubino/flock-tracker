@@ -43,17 +43,25 @@ def process_receipt_ocr(self, receipt_id: int):
         # Update state
         self.update_state(state='PROCESSING', meta={'status': 'Extracting text from image...'})
 
-        # Verify file exists
-        if not os.path.exists(receipt.file_path):
-            # Debug: List files in upload directory
-            upload_dir = os.path.dirname(receipt.file_path)
-            if os.path.exists(upload_dir):
-                files = os.listdir(upload_dir)
-                print(f"✗ File not found: {receipt.file_path}")
-                print(f"  Files in {upload_dir}: {files[:10]}")  # Show first 10 files
-            else:
-                print(f"✗ Upload directory doesn't exist: {upload_dir}")
-            raise FileNotFoundError(f"Receipt file not found: {receipt.file_path}")
+        # Get file data from database (no filesystem needed!)
+        if not receipt.file_data:
+            raise ValueError(f"Receipt {receipt_id} has no file data stored")
+
+        # Write file data to temporary file for OCR processing
+        import tempfile
+        import io
+        from PIL import Image
+
+        try:
+            # Create temporary file with correct extension
+            file_ext = receipt.filename.split('.')[-1] if '.' in receipt.filename else 'jpg'
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_ext}')
+            temp_file.write(receipt.file_data)
+            temp_file.close()
+            temp_path = temp_file.name
+            print(f"✓ Wrote {len(receipt.file_data)} bytes to temp file: {temp_path}")
+        except Exception as e:
+            raise Exception(f"Error creating temporary file: {str(e)}")
 
         # Get OCR engine configuration
         ocr_engine = os.getenv('OCR_ENGINE', 'easyocr').lower()
@@ -66,30 +74,38 @@ def process_receipt_ocr(self, receipt_id: int):
         known_vendor_names = [v.name for v in vendors]
 
         # Use EasyOCR or Tesseract based on configuration
-        if ocr_engine == 'easyocr':
-            # Extract structured data directly with EasyOCR
-            extracted_data = EasyOCRService.extract_structured_data(
-                receipt.file_path,
-                known_vendors=known_vendor_names,
-                gpu=use_gpu,
-                paragraph=True,
-                x_ths=x_ths,
-                y_ths=y_ths
-            )
-            raw_text = extracted_data.pop('raw_text', '')
-        else:
-            # Use Tesseract with layout service
-            raw_text = OCRService.extract_text(receipt.file_path, receipt.file_type)
+        try:
+            if ocr_engine == 'easyocr':
+                # Extract structured data directly with EasyOCR
+                extracted_data = EasyOCRService.extract_structured_data(
+                    temp_path,
+                    known_vendors=known_vendor_names,
+                    gpu=use_gpu,
+                    paragraph=True,
+                    x_ths=x_ths,
+                    y_ths=y_ths
+                )
+                raw_text = extracted_data.pop('raw_text', '')
+            else:
+                # Use Tesseract with layout service
+                raw_text = OCRService.extract_text(temp_path, receipt.file_type)
 
-            # Update state
-            self.update_state(state='PROCESSING', meta={'status': 'Parsing receipt data...'})
+                # Update state
+                self.update_state(state='PROCESSING', meta={'status': 'Parsing receipt data...'})
 
-            # Parse receipt data
-            extracted_data = OCRLayoutService.parse_receipt_with_layout(
-                receipt.file_path,
-                receipt.file_type,
-                known_vendor_names
-            )
+                # Parse receipt data
+                extracted_data = OCRLayoutService.parse_receipt_with_layout(
+                    temp_path,
+                    receipt.file_type,
+                    known_vendor_names
+                )
+        finally:
+            # Clean up temporary file
+            try:
+                os.unlink(temp_path)
+                print(f"✓ Cleaned up temp file: {temp_path}")
+            except:
+                pass
 
         # Update receipt with OCR results
         receipt.raw_text = raw_text

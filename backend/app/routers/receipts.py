@@ -77,39 +77,29 @@ async def upload_receipt(
             detail=f"MIME type not allowed. Allowed types: {', '.join(ALLOWED_MIME_TYPES)}"
         )
 
-    # Generate unique filename
-    import uuid
-    unique_filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = UPLOAD_DIR / unique_filename
-
-    # Save file
+    # Read file data into memory
     try:
-        # Ensure directory exists
-        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        # Verify file was saved
-        if not os.path.exists(file_path):
-            raise Exception(f"File was not saved successfully at {file_path}")
-
-        print(f"✓ File saved: {file_path} (size: {os.path.getsize(file_path)} bytes)")
+        file_data = await file.read()
+        file_size = len(file_data)
+        print(f"✓ File uploaded: {file.filename} (size: {file_size} bytes)")
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error saving file: {str(e)}"
+            detail=f"Error reading file: {str(e)}"
         )
 
-    # Create receipt record
+    # Create receipt record with file data in database
     receipt = Receipt(
         filename=file.filename,
-        file_path=str(file_path),
-        file_type=file.content_type
+        file_path=None,  # No longer using filesystem
+        file_type=file.content_type,
+        file_data=file_data
     )
     db.add(receipt)
     db.commit()
     db.refresh(receipt)
+
+    print(f"✓ Receipt saved to database: ID={receipt.id}")
 
     return receipt
 
