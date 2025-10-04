@@ -5,6 +5,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 from decimal import Decimal
 import pandas as pd
+from .ocr_nlp_utils import OCRNLPUtils
 
 
 class OCRLayoutService:
@@ -95,6 +96,8 @@ class OCRLayoutService:
                 continue
 
             line_text = ' '.join(group['text'].astype(str).tolist())
+            # Apply NLP cleaning to each line
+            line_text = OCRNLPUtils.clean_ocr_text(line_text)
 
             lines.append({
                 'text': line_text,
@@ -309,15 +312,21 @@ class OCRLayoutService:
         # Get full text for vendor/date detection
         full_text = '\n'.join(line['text'] for line in lines)
 
-        # Find vendor in header region
+        # Find vendor in header region using fuzzy matching
         header_lines = OCRLayoutService.find_header_region(lines)
         header_text = '\n'.join(line['text'] for line in header_lines)
 
         vendor = None
-        for known_vendor in known_vendors:
-            if known_vendor.lower() in header_text.lower():
-                vendor = known_vendor
-                break
+        if known_vendors:
+            # Use fuzzy matching for better accuracy
+            match_result = OCRNLPUtils.fuzzy_match_vendor(
+                header_text,
+                known_vendors,
+                threshold=75,
+                context_lines=len(header_lines)
+            )
+            if match_result:
+                vendor = match_result['vendor']
 
         # If no match, take first substantial line from header
         if not vendor and header_lines:

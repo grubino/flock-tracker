@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple
 from decimal import Decimal
 import tempfile
 import os
+from .ocr_nlp_utils import OCRNLPUtils
 
 
 class OCRService:
@@ -17,6 +18,8 @@ class OCRService:
         try:
             image = Image.open(image_path)
             text = pytesseract.image_to_string(image)
+            # Apply NLP cleaning to improve text quality
+            text = OCRNLPUtils.clean_ocr_text(text)
             return text
         except Exception as e:
             raise Exception(f"Error extracting text from image: {str(e)}")
@@ -32,6 +35,8 @@ class OCRService:
             full_text = ""
             for i, image in enumerate(images):
                 text = pytesseract.image_to_string(image)
+                # Apply NLP cleaning to improve text quality
+                text = OCRNLPUtils.clean_ocr_text(text)
                 full_text += f"\n--- Page {i+1} ---\n{text}"
 
             return full_text
@@ -52,16 +57,20 @@ class OCRService:
     def find_vendor_name(text: str, known_vendors: List[str]) -> Optional[str]:
         """
         Attempt to identify vendor name from receipt text.
-        Checks against known vendors first, then tries to extract from top of receipt.
+        Uses fuzzy matching for better accuracy with OCR errors.
         """
-        text_lower = text.lower()
+        # First try fuzzy matching against known vendors
+        if known_vendors:
+            match_result = OCRNLPUtils.fuzzy_match_vendor(
+                text,
+                known_vendors,
+                threshold=75,  # 75% similarity threshold
+                context_lines=7
+            )
+            if match_result:
+                return match_result['vendor']
 
-        # Check against known vendors
-        for vendor in known_vendors:
-            if vendor.lower() in text_lower:
-                return vendor
-
-        # Try to extract vendor from first few lines (usually at top of receipt)
+        # Fallback: try to extract vendor from first few lines (usually at top of receipt)
         lines = text.strip().split('\n')
         first_lines = [line.strip() for line in lines[:5] if line.strip()]
 
