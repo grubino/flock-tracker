@@ -30,12 +30,6 @@ class Settings(BaseSettings):
     # Admin user settings
     admin_password: str = ""
 
-    # OCR settings
-    ocr_engine: str = "easyocr"  # Options: tesseract, easyocr
-    ocr_use_gpu: bool = False
-    ocr_x_ths: float = 1.0  # Horizontal threshold for EasyOCR paragraph detection
-    ocr_y_ths: float = 0.5  # Vertical threshold for EasyOCR paragraph detection
-
     def get_cors_origins_list(self) -> List[str]:
         """Convert comma-separated CORS origins string to list"""
         if self.cors_origins == "*":

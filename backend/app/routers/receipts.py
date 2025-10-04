@@ -41,7 +41,7 @@ else:
     print("✗ REDIS_URL not set - Celery unavailable, will use synchronous processing")
     # Import services for fallback
     from app.services.ocr_service import OCRService
-    from app.services.easyocr_service import EasyOCRService
+    from app.services.ocr_layout_service import OCRLayoutService
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
@@ -172,34 +172,43 @@ async def process_receipt(
             }
         else:
             # Fallback to synchronous processing
-            import os
-            ocr_engine = os.getenv('OCR_ENGINE', 'easyocr').lower()
-            use_gpu = os.getenv('OCR_USE_GPU', 'false').lower() == 'true'
-            x_ths = float(os.getenv('OCR_X_THS', '1.0'))
-            y_ths = float(os.getenv('OCR_Y_THS', '0.5'))
+            import tempfile
 
-            vendors = db.query(Vendor).all()
-            known_vendor_names = [v.name for v in vendors]
-
-            if ocr_engine == 'easyocr':
-                # Use EasyOCR
-                extracted_data = EasyOCRService.extract_structured_data(
-                    receipt.file_path,
-                    known_vendors=known_vendor_names,
-                    gpu=use_gpu,
-                    paragraph=True,
-                    x_ths=x_ths,
-                    y_ths=y_ths
+            # Get file data from database and write to temp file
+            if not receipt.file_data:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Receipt has no file data"
                 )
-                raw_text = extracted_data.pop('raw_text', '')
-            else:
-                # Use Tesseract
-                raw_text = OCRService.extract_text(receipt.file_path, receipt.file_type)
-                extracted_data = OCRService.parse_receipt(raw_text, known_vendor_names)
 
-            receipt.raw_text = raw_text
-            receipt.extracted_data = extracted_data
-            db.commit()
+            # Create temp file
+            file_ext = receipt.filename.split('.')[-1] if '.' in receipt.filename else 'jpg'
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_ext}')
+            temp_file.write(receipt.file_data)
+            temp_file.close()
+            temp_path = temp_file.name
+
+            try:
+                vendors = db.query(Vendor).all()
+                known_vendor_names = [v.name for v in vendors]
+
+                # Use Tesseract with layout service
+                raw_text = OCRService.extract_text(temp_path, receipt.file_type)
+                extracted_data = OCRLayoutService.parse_receipt_with_layout(
+                    temp_path,
+                    receipt.file_type,
+                    known_vendor_names
+                )
+
+                receipt.raw_text = raw_text
+                receipt.extracted_data = extracted_data
+                db.commit()
+            finally:
+                # Clean up temp file
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
 
             result = {'raw_text': raw_text}
             result.update(extracted_data)

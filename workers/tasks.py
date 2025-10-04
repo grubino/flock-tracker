@@ -1,7 +1,6 @@
 from workers.celery_app import celery_app
 from app.services.ocr_layout_service import OCRLayoutService
 from app.services.ocr_service import OCRService
-from app.services.easyocr_service import EasyOCRService
 from app.database.database import SessionLocal
 from app.models.receipt import Receipt
 from app.models.vendor import Vendor
@@ -63,42 +62,24 @@ def process_receipt_ocr(self, receipt_id: int):
         except Exception as e:
             raise Exception(f"Error creating temporary file: {str(e)}")
 
-        # Get OCR engine configuration
-        ocr_engine = os.getenv('OCR_ENGINE', 'easyocr').lower()
-        use_gpu = os.getenv('OCR_USE_GPU', 'false').lower() == 'true'
-        x_ths = float(os.getenv('OCR_X_THS', '1.0'))
-        y_ths = float(os.getenv('OCR_Y_THS', '0.5'))
-
         # Get known vendors for better matching
         vendors = db.query(Vendor).all()
         known_vendor_names = [v.name for v in vendors]
 
-        # Use EasyOCR or Tesseract based on configuration
+        # Use Tesseract with layout service
         try:
-            if ocr_engine == 'easyocr':
-                # Extract structured data directly with EasyOCR
-                extracted_data = EasyOCRService.extract_structured_data(
-                    temp_path,
-                    known_vendors=known_vendor_names,
-                    gpu=use_gpu,
-                    paragraph=True,
-                    x_ths=x_ths,
-                    y_ths=y_ths
-                )
-                raw_text = extracted_data.pop('raw_text', '')
-            else:
-                # Use Tesseract with layout service
-                raw_text = OCRService.extract_text(temp_path, receipt.file_type)
+            # Extract text using Tesseract
+            raw_text = OCRService.extract_text(temp_path, receipt.file_type)
 
-                # Update state
-                self.update_state(state='PROCESSING', meta={'status': 'Parsing receipt data...'})
+            # Update state
+            self.update_state(state='PROCESSING', meta={'status': 'Parsing receipt data...'})
 
-                # Parse receipt data
-                extracted_data = OCRLayoutService.parse_receipt_with_layout(
-                    temp_path,
-                    receipt.file_type,
-                    known_vendor_names
-                )
+            # Parse receipt data using layout service
+            extracted_data = OCRLayoutService.parse_receipt_with_layout(
+                temp_path,
+                receipt.file_type,
+                known_vendor_names
+            )
         finally:
             # Clean up temporary file
             try:
