@@ -16,12 +16,12 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy workers code
-COPY workers/ ./workers/
+COPY workers/ /app/workers/
 
-# Copy backend directory to preserve import structure
-COPY backend/ ./backend/
+# Copy backend/app as 'app' subdirectory so imports like 'from app.config' work
+COPY backend/app /app/app
 
-# Set Python path
+# Set PYTHONPATH so Python can find both 'app' and 'workers' modules
 ENV PYTHONPATH=/app
 
 # Run Celery worker

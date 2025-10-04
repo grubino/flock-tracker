@@ -1,9 +1,9 @@
 from workers.celery_app import celery_app
-from backend.app.services.ocr_layout_service import OCRLayoutService
-from backend.app.services.ocr_service import OCRService
-from backend.app.database.database import SessionLocal
-from backend.app.models.receipt import Receipt
-from backend.app.models.vendor import Vendor
+from app.services.ocr_layout_service import OCRLayoutService
+from app.services.ocr_service import OCRService
+from app.database.database import SessionLocal
+from app.models.receipt import Receipt
+from app.models.vendor import Vendor
 import os
 
 
