@@ -46,7 +46,8 @@ else:
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
 # Configure upload directory
-UPLOAD_DIR = Path("uploads/receipts")
+# Use /data/uploads for Render Disk or uploads/receipts for local dev
+UPLOAD_DIR = Path(os.getenv('UPLOAD_DIR', 'uploads/receipts'))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowed file types
