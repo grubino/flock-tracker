@@ -26,6 +26,15 @@ if CELERY_AVAILABLE:
         broker=REDIS_URL,
         backend=REDIS_URL
     )
+    # Configure serialization to match worker
+    celery_app.conf.update(
+        task_serializer='json',
+        accept_content=['json'],
+        result_serializer='json',
+        timezone='UTC',
+        enable_utc=True,
+        result_extended=True,  # Include more metadata in results
+    )
     print(f"✓ Celery client initialized with broker: {REDIS_URL[:20]}...")
 else:
     celery_app = None
@@ -221,37 +230,53 @@ async def get_task_status(
         )
 
     from celery.result import AsyncResult
-    task = AsyncResult(task_id, app=celery_app)
 
-    if task.state == 'PENDING':
-        return {
-            'status': 'pending',
-            'task_id': task_id,
-            'message': 'Task is waiting to be processed'
-        }
-    elif task.state == 'PROCESSING':
-        return {
-            'status': 'processing',
-            'task_id': task_id,
-            'message': task.info.get('status', 'Processing...') if task.info else 'Processing...'
-        }
-    elif task.state == 'SUCCESS':
-        return {
-            'status': 'completed',
-            'task_id': task_id,
-            'result': task.result
-        }
-    elif task.state == 'FAILURE':
-        return {
-            'status': 'failed',
-            'task_id': task_id,
-            'error': str(task.info) if task.info else 'Unknown error'
-        }
-    else:
-        return {
-            'status': task.state.lower(),
-            'task_id': task_id
-        }
+    try:
+        task = AsyncResult(task_id, app=celery_app)
+
+        if task.state == 'PENDING':
+            return {
+                'status': 'pending',
+                'task_id': task_id,
+                'message': 'Task is waiting to be processed'
+            }
+        elif task.state == 'PROCESSING':
+            return {
+                'status': 'processing',
+                'task_id': task_id,
+                'message': task.info.get('status', 'Processing...') if task.info else 'Processing...'
+            }
+        elif task.state == 'SUCCESS':
+            return {
+                'status': 'completed',
+                'task_id': task_id,
+                'result': task.result
+            }
+        elif task.state == 'FAILURE':
+            # Handle failure with better error extraction
+            error_msg = 'Unknown error'
+            if task.info:
+                if isinstance(task.info, dict):
+                    error_msg = task.info.get('error', str(task.info))
+                else:
+                    error_msg = str(task.info)
+
+            return {
+                'status': 'failed',
+                'task_id': task_id,
+                'error': error_msg
+            }
+        else:
+            return {
+                'status': task.state.lower(),
+                'task_id': task_id
+            }
+    except Exception as e:
+        # Catch serialization errors and other issues
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving task status: {str(e)}"
+        )
 
 
 @router.get("/", response_model=List[ReceiptResponse])
