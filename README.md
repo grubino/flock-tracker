@@ -1,5 +1,8 @@
 # Flock Tracker
 
+[![Backend Tests](https://github.com/grubino/flock-tracker/actions/workflows/backend-tests.yml/badge.svg)](https://github.com/grubino/flock-tracker/actions/workflows/backend-tests.yml)
+[![codecov](https://codecov.io/gh/grubino/flock-tracker/branch/main/graph/badge.svg)](https://codecov.io/gh/grubino/flock-tracker)
+
 A comprehensive web application for tracking farm animals (sheep, chickens, bees), their events, and locations.
 
 ## Features
