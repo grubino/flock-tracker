@@ -35,7 +35,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const HomePage: React.FC = () => {
+export const HomePage: React.FC = () => {
   const { user } = useAuth();
 
   // Customer users see the animal catalog directly

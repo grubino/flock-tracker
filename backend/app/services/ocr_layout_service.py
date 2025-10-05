@@ -31,45 +31,97 @@ class OCRLayoutService:
             raise ValueError(f"Unsupported file type: {file_type}")
 
         # Preprocess image for better OCR
-        from PIL import ImageEnhance, ImageFilter
+        from PIL import ImageEnhance, ImageFilter, ImageOps
+        import numpy as np
+        import cv2
 
-        # Upscale if image is small (improves OCR on low-res receipts)
-        width, height = image.size
-        if width < 1000:
-            scale_factor = 1000 / width
-            new_size = (int(width * scale_factor), int(height * scale_factor))
-            image = image.resize(new_size, Image.LANCZOS)
-
-        # Convert to grayscale
+        # Convert to grayscale first
         image = image.convert('L')
 
-        # Enhance contrast
-        enhancer = ImageEnhance.Contrast(image)
-        image = enhancer.enhance(2.0)
+        # Convert PIL to OpenCV for advanced preprocessing
+        img_array = np.array(image)
 
-        # Enhance sharpness
-        enhancer = ImageEnhance.Sharpness(image)
-        image = enhancer.enhance(1.5)
+        # Upscale if image is small (improves OCR on low-res receipts)
+        height, width = img_array.shape
+        if width < 1500:
+            scale_factor = 1500 / width
+            new_width = int(width * scale_factor)
+            new_height = int(height * scale_factor)
+            img_array = cv2.resize(img_array, (new_width, new_height), interpolation=cv2.INTER_CUBIC)
 
-        # Apply slight blur to reduce noise, then sharpen
-        image = image.filter(ImageFilter.MedianFilter(size=3))
+        # Deskew the image (receipts are often rotated)
+        def deskew(image):
+            coords = np.column_stack(np.where(image > 0))
+            if len(coords) == 0:
+                return image
+            angle = cv2.minAreaRect(coords)[-1]
+            if angle < -45:
+                angle = -(90 + angle)
+            else:
+                angle = -angle
+            if abs(angle) > 0.5:  # Only rotate if needed
+                (h, w) = image.shape[:2]
+                center = (w // 2, h // 2)
+                M = cv2.getRotationMatrix2D(center, angle, 1.0)
+                image = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE)
+            return image
 
-        # Get detailed layout data as DataFrame
-        # PSM 11 = Sparse text (better for receipts with varied formatting)
-        # Try PSM 11 first, fallback to PSM 6 if it fails
-        try:
-            data = pytesseract.image_to_data(
-                image,
-                output_type=pytesseract.Output.DATAFRAME,
-                config='--psm 11'
-            )
-        except:
-            # Fallback to PSM 6
-            data = pytesseract.image_to_data(
-                image,
-                output_type=pytesseract.Output.DATAFRAME,
-                config='--psm 6'
-            )
+        img_array = deskew(img_array)
+
+        # Denoise
+        img_array = cv2.fastNlMeansDenoising(img_array, None, 10, 7, 21)
+
+        # Apply Otsu's binarization (better than adaptive for receipts)
+        img_array = cv2.threshold(img_array, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+
+        # Dilate to connect broken characters
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+        img_array = cv2.dilate(img_array, kernel, iterations=1)
+
+        # Convert back to PIL
+        image = Image.fromarray(img_array)
+
+        # Use LIGHT preprocessing - aggressive preprocessing loses text
+        # Just upscale and grayscale
+        light_image = Image.open(image_path) if file_type.startswith('image/') else images[0]
+        light_image = light_image.convert('L')
+
+        # Upscale if small
+        width, height = light_image.size
+        if width < 1500:
+            scale_factor = 1500 / width
+            new_size = (int(width * scale_factor), int(height * scale_factor))
+            light_image = light_image.resize(new_size, Image.LANCZOS)
+
+        # Get detailed layout data as DataFrame using LIGHT preprocessing
+        best_data = None
+        max_words = 0
+        best_psm = None
+
+        for psm in [6, 4, 3]:  # Try different page segmentation modes
+            try:
+                data = pytesseract.image_to_data(
+                    light_image,  # Use lightly processed image
+                    output_type=pytesseract.Output.DATAFRAME,
+                    config=f'--psm {psm}'
+                )
+                # Filter valid data
+                valid_data = data[data['text'].notna() & (data['conf'] > 0) & (data['conf'] != -1)]
+
+                # Use the mode that detects the most words with good confidence
+                word_count = len(valid_data[valid_data['conf'] > 20])  # Lower threshold
+                if word_count > max_words:
+                    max_words = word_count
+                    best_data = data
+                    best_psm = psm
+            except:
+                continue
+
+        if best_data is None:
+            raise Exception("OCR failed with all PSM modes")
+
+        print(f"Using PSM mode {best_psm} with {max_words} words (light preprocessing)")
+        data = best_data
 
         # Filter out empty text and low confidence
         data = data[data['text'].notna()]
@@ -227,37 +279,72 @@ class OCRLayoutService:
         """
         items = []
 
-        # Price pattern (right-aligned, ends with amount)
-        price_pattern = r'\$?\d+[,.]?\d{0,2}\s*$'
+        # More flexible price patterns - handle various formats ANYWHERE in the line
+        price_patterns = [
+            r'(\$\s*\d+[.,]\d{2})',  # $10.99 or $ 10.99 (anywhere)
+            r'(\d+[.,]\d{2})',        # 10.99 (anywhere)
+            r'(\$\s*\d+)\b',           # $10 (anywhere, word boundary)
+        ]
 
         for line in lines:
             text = line['text'].strip()
 
-            # Check if line has a price at the end
-            price_match = re.search(price_pattern, text)
+            # Skip lines that are obviously not items
+            if len(text) < 3:  # Too short
+                continue
+            if text.isdigit() and len(text) > 4:  # Long number (like credit card)
+                continue
+            if re.match(r'^[\d\s\-]+$', text):  # Only numbers, spaces, dashes
+                continue
+
+            price_match = None
+
+            # Try each price pattern (anywhere in line)
+            for pattern in price_patterns:
+                match = re.search(pattern, text)
+                if match:
+                    price_match = match
+                    break
 
             if price_match:
-                price_str = price_match.group().replace('$', '').replace(',', '.')
+                price_str = price_match.group(1).replace('$', '').replace(' ', '').replace(',', '.')
 
                 try:
                     amount = Decimal(price_str)
 
-                    # Reasonable price range for line items
-                    if 0 < amount < 10000:
+                    # Reasonable price range for line items (at least $0.50)
+                    if 0.50 <= amount < 10000:
+                        # Extract description - text before the price
                         description = text[:price_match.start()].strip()
 
-                        # Filter out total/tax lines
-                        if not re.search(r'\b(total|subtotal|tax|balance|change)\b', description, re.IGNORECASE):
-                            if description:  # Must have description
-                                items.append({
-                                    'description': description,
-                                    'amount': str(amount),
-                                    'confidence': float(line['confidence']),  # Convert to Python float
-                                    'position': {
-                                        'top': int(line['top']),  # Convert to Python int
-                                        'left': int(line['left'])
-                                    }
-                                })
+                        # Clean up common OCR artifacts from description
+                        description = re.sub(r'^[©®™\*\-\•\s]+', '', description)  # Remove leading symbols
+                        description = re.sub(r'[©®™\*\-\•\s]+$', '', description)  # Remove trailing symbols
+                        description = description.strip()
+
+                        # Filter out total/tax/payment lines and non-items
+                        skip_patterns = [
+                            r'\b(total|subtotal|tax|balance|change|sold|items|tend|due|card)\b',
+                            r'^\d+$',  # Just a number
+                            r'^[A-Z]{2,3}\s*\d+',  # Store codes like "STH 01247"
+                        ]
+
+                        should_skip = False
+                        for pattern in skip_patterns:
+                            if re.search(pattern, text, re.IGNORECASE):  # Check full line, not just description
+                                should_skip = True
+                                break
+
+                        if not should_skip and description and len(description) > 2:  # Must have real description
+                            items.append({
+                                'description': description,
+                                'amount': str(amount),
+                                'confidence': float(line['confidence']),  # Convert to Python float
+                                'position': {
+                                    'top': int(line['top']),  # Convert to Python int
+                                    'left': int(line['left'])
+                                }
+                            })
                 except:
                     continue
 
@@ -309,6 +396,13 @@ class OCRLayoutService:
         # Group into lines
         lines = OCRLayoutService.group_by_lines(df)
 
+        # DEBUG: Log what we detected
+        print(f"=== OCR DEBUG ===")
+        print(f"Total lines detected: {len(lines)}")
+        for i, line in enumerate(lines):
+            print(f"Line {i}: '{line['text']}' (conf: {line['confidence']:.1f})")
+        print(f"=================")
+
         # Get full text for vendor/date detection
         full_text = '\n'.join(line['text'] for line in lines)
 
@@ -339,6 +433,14 @@ class OCRLayoutService:
 
         # Extract line items using layout
         items = OCRLayoutService.extract_line_items_with_layout(lines)
+        print(f"Extracted items: {items}")
+
+        # If no items found, try simpler extraction from full text
+        if not items:
+            print("Layout extraction failed, trying simple text extraction...")
+            from app.services.ocr_service import OCRService
+            items = OCRService.extract_line_items(full_text)
+            print(f"Simple extraction found: {items}")
 
         # Find total in footer region
         footer_lines = OCRLayoutService.find_footer_region(lines)
@@ -352,6 +454,13 @@ class OCRLayoutService:
                         break
                     except:
                         pass
+
+        # If still no total, try searching all text
+        if not total:
+            print("Footer total search failed, searching all lines...")
+            from app.services.ocr_service import OCRService
+            total = OCRService.extract_total(full_text)
+            print(f"Total from full text: {total}")
 
         # Extract date from full text
         date = None
