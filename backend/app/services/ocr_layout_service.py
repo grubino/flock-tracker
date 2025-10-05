@@ -252,10 +252,10 @@ class OCRLayoutService:
                                 items.append({
                                     'description': description,
                                     'amount': str(amount),
-                                    'confidence': line['confidence'],
+                                    'confidence': float(line['confidence']),  # Convert to Python float
                                     'position': {
-                                        'top': line['top'],
-                                        'left': line['left']
+                                        'top': int(line['top']),  # Convert to Python int
+                                        'left': int(line['left'])
                                     }
                                 })
                 except:
@@ -386,11 +386,11 @@ class OCRLayoutService:
             'items': items,
             'total': total,
             'date': date,
-            'confidence': round(avg_confidence, 2),
+            'confidence': float(round(avg_confidence, 2)),  # Convert to Python float
             'layout_info': {
-                'total_lines': len(lines),
-                'header_lines': len(header_lines),
-                'footer_lines': len(footer_lines),
-                'detected_items': len(items)
+                'total_lines': int(len(lines)),  # Convert to Python int
+                'header_lines': int(len(header_lines)),
+                'footer_lines': int(len(footer_lines)),
+                'detected_items': int(len(items))
             }
         }
