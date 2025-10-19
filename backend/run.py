@@ -11,5 +11,20 @@ if __name__ == "__main__":
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
+        reload_excludes=[
+            "*.db",
+            "*.db-journal",
+            "*.db-shm",
+            "*.db-wal",
+            "*.sqlite",
+            "*.sqlite3",
+            "*.log",
+            "*.tmp",
+            ".coverage",
+            "coverage.xml",
+            "htmlcov/*",
+            "__pycache__/*",
+            "*.pyc",
+        ],
         log_level="info" if not settings.debug else "debug"
     )
