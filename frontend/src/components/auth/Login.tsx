@@ -107,6 +107,8 @@ const useStyles = makeStyles({
   },
 });
 
+const DEFAULT_SERVER_URL = import.meta.env.VITE_API_URL || '';
+
 export const Login: React.FC = () => {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -114,6 +116,10 @@ export const Login: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [serverUrl, setServerUrl] = useState(() => {
+    // Load from localStorage or use default
+    return localStorage.getItem('server_url') || DEFAULT_SERVER_URL;
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [localLoading, setLocalLoading] = useState(false);
@@ -124,6 +130,9 @@ export const Login: React.FC = () => {
     setLocalLoading(true);
 
     try {
+      // Store the server URL before logging in
+      localStorage.setItem('server_url', serverUrl);
+
       await loginWithCredentials(email, password);
       navigate('/');
     } catch {
@@ -198,6 +207,19 @@ export const Login: React.FC = () => {
         )}
 
         <form className={styles.form} onSubmit={handleSubmit}>
+          <div>
+            <Text size={200} style={{ marginBottom: tokens.spacingVerticalXXS, display: 'block', color: tokens.colorNeutralForeground2 }}>
+              Server URL
+            </Text>
+            <Input
+              type="url"
+              placeholder="Server URL (e.g., https://api.example.com)"
+              value={serverUrl}
+              onChange={(e) => setServerUrl(e.target.value)}
+              className={styles.inputField}
+            />
+          </div>
+
           <Input
             type="email"
             placeholder="Email address"

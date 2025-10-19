@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import {
@@ -10,29 +10,64 @@ import {
   tokens,
   Spinner,
   TabList,
-  Tab
+  Tab,
+  Input,
+  Label,
+  Dropdown,
+  Option,
+  Checkbox
 } from '@fluentui/react-components';
-import { animalsApi } from '../../services/api';
-import { AnimalType } from '../../types';
+import { Dismiss24Regular } from '@fluentui/react-icons';
+import { animalsApi, locationsApi, eventsApi } from '../../services/api';
+import { AnimalType, SheepGender, ChickenGender, EventType } from '../../types';
 import type { Animal } from '../../types';
+
+// Get server URL from localStorage or fall back to environment variable
+const getServerUrl = (): string => {
+  const storedUrl = localStorage.getItem('server_url');
+  return storedUrl || import.meta.env.VITE_API_URL || '';
+};
 
 const useStyles = makeStyles({
   container: {
     padding: tokens.spacingVerticalXL,
+    '@media (max-width: 768px)': {
+      padding: tokens.spacingVerticalM,
+    },
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalM,
+    },
+  },
+  headerActions: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalM,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalS,
+    },
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
     gap: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: '1fr',
+      gap: tokens.spacingVerticalM,
+    },
   },
   card: {
     padding: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      padding: tokens.spacingVerticalM,
+    },
   },
   cardImage: {
     width: '100%',
@@ -40,6 +75,18 @@ const useStyles = makeStyles({
     objectFit: 'cover',
     borderRadius: tokens.borderRadiusMedium,
     marginBottom: tokens.spacingVerticalM,
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: tokens.spacingVerticalM,
+    gap: tokens.spacingHorizontalS,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      gap: tokens.spacingVerticalS,
+    },
   },
   cardDetails: {
     display: 'flex',
@@ -51,6 +98,10 @@ const useStyles = makeStyles({
   cardActions: {
     display: 'flex',
     gap: tokens.spacingHorizontalM,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalS,
+    },
   },
   emptyState: {
     textAlign: 'center',
@@ -62,25 +113,143 @@ const useStyles = makeStyles({
     alignItems: 'center',
     padding: tokens.spacingVerticalXXL,
   },
+  filterSection: {
+    marginBottom: tokens.spacingVerticalL,
+    padding: tokens.spacingVerticalM,
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: tokens.borderRadiusMedium,
+  },
+  filterGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: tokens.spacingHorizontalM,
+    marginTop: tokens.spacingVerticalM,
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: '1fr',
+      gap: tokens.spacingVerticalM,
+    },
+  },
+  filterField: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+  },
+  filterActions: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalS,
+    marginTop: tokens.spacingVerticalM,
+    alignItems: 'center',
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalS,
+    },
+  },
 });
 
 const AnimalList: React.FC = () => {
   const styles = useStyles();
   const [selectedTab, setSelectedTab] = useState<string>('all');
 
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedGender, setSelectedGender] = useState<string>('');
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  const [birthDateFrom, setBirthDateFrom] = useState<string>('');
+  const [birthDateTo, setBirthDateTo] = useState<string>('');
+  const [showDeadAnimals, setShowDeadAnimals] = useState<boolean>(false);
+
   const { data: animals, isLoading, error } = useQuery({
     queryKey: ['animals'],
     queryFn: () => animalsApi.getAll().then(res => res.data),
+  });
+
+  const { data: locations } = useQuery({
+    queryKey: ['locations'],
+    queryFn: () => locationsApi.getAll().then(res => res.data),
+  });
+
+  const { data: events } = useQuery({
+    queryKey: ['events'],
+    queryFn: () => eventsApi.getAll().then(res => res.data),
   });
 
   const handleTabSelect = (_event: any, data: any) => {
     setSelectedTab(data.value as string);
   };
 
-  const filteredAnimals = animals?.filter((animal: Animal) => {
-    if (selectedTab === 'all') return true;
-    return animal.animal_type === selectedTab;
-  });
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedGender('');
+    setSelectedLocation('');
+    setBirthDateFrom('');
+    setBirthDateTo('');
+    setShowDeadAnimals(false);
+  };
+
+  const hasActiveFilters = searchQuery || selectedGender || selectedLocation || birthDateFrom || birthDateTo || showDeadAnimals;
+
+  // Create a set of animal IDs that have death events
+  const deadAnimalIds = useMemo(() => {
+    if (!events) return new Set<number>();
+
+    const deathEvents = events.filter(event => event.event_type === EventType.DEATH);
+    return new Set(deathEvents.map(event => event.animal_id));
+  }, [events]);
+
+  const filteredAnimals = useMemo(() => {
+    return animals?.filter((animal: Animal) => {
+      // Filter by tab (animal type)
+      if (selectedTab !== 'all' && animal.animal_type !== selectedTab) {
+        return false;
+      }
+
+      // Filter dead animals (hide by default unless showDeadAnimals is checked)
+      const isDead = deadAnimalIds.has(animal.id);
+      if (isDead && !showDeadAnimals) {
+        return false;
+      }
+
+      // Filter by search query (name or tag number)
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesName = animal.name?.toLowerCase().includes(query);
+        const matchesTag = animal.tag_number.toLowerCase().includes(query);
+        if (!matchesName && !matchesTag) {
+          return false;
+        }
+      }
+
+      // Filter by gender
+      if (selectedGender) {
+        if (animal.animal_type === AnimalType.SHEEP && animal.sheep_gender !== selectedGender) {
+          return false;
+        }
+        if (animal.animal_type === AnimalType.CHICKEN && animal.chicken_gender !== selectedGender) {
+          return false;
+        }
+      }
+
+      // Filter by location
+      if (selectedLocation && animal.current_location_id?.toString() !== selectedLocation) {
+        return false;
+      }
+
+      // Filter by birth date range
+      if (birthDateFrom && animal.birth_date) {
+        if (new Date(animal.birth_date) < new Date(birthDateFrom)) {
+          return false;
+        }
+      }
+      if (birthDateTo && animal.birth_date) {
+        if (new Date(animal.birth_date) > new Date(birthDateTo)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [animals, selectedTab, searchQuery, selectedGender, selectedLocation, birthDateFrom, birthDateTo, showDeadAnimals, deadAnimalIds]);
 
   if (isLoading) {
     return (
@@ -104,11 +273,18 @@ const AnimalList: React.FC = () => {
         <Text as="h1" size={800} weight="bold">
           Animals
         </Text>
-        <RouterLink to="/animals/new" style={{ textDecoration: 'none' }}>
-          <Button appearance="primary">
-            Add Animal
-          </Button>
-        </RouterLink>
+        <div className={styles.headerActions}>
+          <RouterLink to="/animals/import" style={{ textDecoration: 'none' }}>
+            <Button appearance="secondary" style={{ width: '100%' }}>
+              Import CSV
+            </Button>
+          </RouterLink>
+          <RouterLink to="/animals/new" style={{ textDecoration: 'none' }}>
+            <Button appearance="primary" style={{ width: '100%' }}>
+              Add Animal
+            </Button>
+          </RouterLink>
+        </div>
       </div>
 
       <TabList selectedValue={selectedTab} onTabSelect={handleTabSelect} style={{ marginBottom: tokens.spacingVerticalL }}>
@@ -118,24 +294,126 @@ const AnimalList: React.FC = () => {
         <Tab value={AnimalType.HIVE}>Hives</Tab>
       </TabList>
 
+      <Card className={styles.filterSection}>
+        <Text weight="semibold" size={400}>Filters</Text>
+
+        <div className={styles.filterGrid}>
+          <div className={styles.filterField}>
+            <Label>Search</Label>
+            <Input
+              placeholder="Search by name or tag number..."
+              value={searchQuery}
+              onChange={(_, data) => setSearchQuery(data.value)}
+            />
+          </div>
+
+          <div className={styles.filterField}>
+            <Label>Gender</Label>
+            <Dropdown
+              placeholder="All genders"
+              value={selectedGender}
+              selectedOptions={selectedGender ? [selectedGender] : []}
+              onOptionSelect={(_, data) => setSelectedGender(data.optionValue || '')}
+            >
+              <Option value="">All genders</Option>
+              {selectedTab === AnimalType.SHEEP || selectedTab === 'all' ? (
+                <>
+                  <Option value={SheepGender.EWE}>Ewe</Option>
+                  <Option value={SheepGender.RAM}>Ram</Option>
+                </>
+              ) : null}
+              {selectedTab === AnimalType.CHICKEN || selectedTab === 'all' ? (
+                <>
+                  <Option value={ChickenGender.HEN}>Hen</Option>
+                  <Option value={ChickenGender.ROOSTER}>Rooster</Option>
+                </>
+              ) : null}
+            </Dropdown>
+          </div>
+
+          <div className={styles.filterField}>
+            <Label>Location</Label>
+            <Dropdown
+              placeholder="All locations"
+              value={selectedLocation}
+              selectedOptions={selectedLocation ? [selectedLocation] : []}
+              onOptionSelect={(_, data) => setSelectedLocation(data.optionValue || '')}
+            >
+              <Option value="">All locations</Option>
+              {locations?.map(location => (
+                <Option
+                  key={location.id}
+                  value={location.id.toString()}
+                  text={location.paddock_name ? `${location.name} - ${location.paddock_name}` : location.name}
+                >
+                  {location.paddock_name ? `${location.name} - ${location.paddock_name}` : location.name}
+                </Option>
+              ))}
+            </Dropdown>
+          </div>
+
+          <div className={styles.filterField}>
+            <Label>Birth Date From</Label>
+            <Input
+              type="date"
+              value={birthDateFrom}
+              onChange={(_, data) => setBirthDateFrom(data.value)}
+            />
+          </div>
+
+          <div className={styles.filterField}>
+            <Label>Birth Date To</Label>
+            <Input
+              type="date"
+              value={birthDateTo}
+              onChange={(_, data) => setBirthDateTo(data.value)}
+            />
+          </div>
+
+          <div className={styles.filterField}>
+            <Label>&nbsp;</Label>
+            <Checkbox
+              checked={showDeadAnimals}
+              onChange={(_, data) => setShowDeadAnimals(data.checked as boolean)}
+              label="Show deceased animals"
+            />
+          </div>
+        </div>
+
+        {hasActiveFilters && (
+          <div className={styles.filterActions}>
+            <Button
+              appearance="subtle"
+              size="small"
+              onClick={clearFilters}
+              icon={<Dismiss24Regular />}
+            >
+              Clear Filters
+            </Button>
+            <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+              Showing {filteredAnimals?.length || 0} of {animals?.length || 0} animals
+            </Text>
+          </div>
+        )}
+      </Card>
+
       {filteredAnimals && filteredAnimals.length > 0 ? (
         <div className={styles.grid}>
           {filteredAnimals.map((animal: Animal) => {
             const photographs = animal.photographs || [];
             const primaryPhoto = photographs.find(p => p.is_primary) || photographs[0];
-            const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
             return (
             <Card key={animal.id} className={styles.card}>
               {primaryPhoto && (
                 <img
-                  src={`${API_BASE_URL}/api/photographs/${primaryPhoto.id}/file`}
+                  src={`${getServerUrl()}/api/photographs/${primaryPhoto.id}/file`}
                   alt={animal.name || animal.tag_number}
                   className={styles.cardImage}
                 />
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: tokens.spacingVerticalM }}>
+              <div className={styles.cardHeader}>
                 <div>
                   <Text size={500} weight="semibold" style={{ display: 'block' }}>
                     {animal.name || `Tag: ${animal.tag_number}`}
@@ -180,13 +458,13 @@ const AnimalList: React.FC = () => {
               </div>
 
               <div className={styles.cardActions} style={{ marginTop: tokens.spacingVerticalM }}>
-                <RouterLink to={`/animals/${animal.id}`} style={{ textDecoration: 'none' }}>
-                  <Button appearance="primary" size="small">
+                <RouterLink to={`/animals/${animal.id}`} style={{ textDecoration: 'none', flex: 1 }}>
+                  <Button appearance="primary" size="small" style={{ width: '100%' }}>
                     View
                   </Button>
                 </RouterLink>
-                <RouterLink to={`/animals/${animal.id}/edit`} style={{ textDecoration: 'none' }}>
-                  <Button appearance="secondary" size="small">
+                <RouterLink to={`/animals/${animal.id}/edit`} style={{ textDecoration: 'none', flex: 1 }}>
+                  <Button appearance="secondary" size="small" style={{ width: '100%' }}>
                     Edit
                   </Button>
                 </RouterLink>
@@ -198,12 +476,19 @@ const AnimalList: React.FC = () => {
       ) : (
         <div className={styles.emptyState}>
           <Text size={400} style={{ marginBottom: tokens.spacingVerticalM, display: 'block' }}>
-            {animals && animals.length > 0
-              ? `No ${selectedTab === 'all' ? 'animals' : selectedTab} found`
+            {hasActiveFilters || selectedTab !== 'all'
+              ? 'No animals match your filters'
               : 'No animals found'
             }
           </Text>
-          {(!animals || animals.length === 0) && (
+          {hasActiveFilters || selectedTab !== 'all' ? (
+            <Button appearance="secondary" onClick={() => {
+              clearFilters();
+              setSelectedTab('all');
+            }}>
+              Clear All Filters
+            </Button>
+          ) : (
             <RouterLink to="/animals/new" style={{ textDecoration: 'none' }}>
               <Button appearance="primary">
                 Add Your First Animal

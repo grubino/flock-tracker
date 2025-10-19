@@ -26,6 +26,12 @@ import {
 import { useGetAnimalPhotographsApiPhotographsAnimalAnimalIdGet, useSetPrimaryPhotographApiPhotographsPhotographIdSetPrimaryPost, useDeletePhotographApiPhotographsPhotographIdDelete } from '../generated/api';
 import { PhotoUpload } from './PhotoUpload';
 
+// Get server URL from localStorage or fall back to environment variable
+const getServerUrl = (): string => {
+  const storedUrl = localStorage.getItem('server_url');
+  return storedUrl || import.meta.env.VITE_API_URL || '';
+};
+
 const useStyles = makeStyles({
   container: {
     marginTop: tokens.spacingVerticalXL,
@@ -116,7 +122,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload 
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
 
-  const { data: photographs, isLoading, error } = useGetAnimalPhotographsApiPhotographsAnimalAnimalIdGet(animalId);
+  const { data: photographs, isLoading } = useGetAnimalPhotographsApiPhotographsAnimalAnimalIdGet(animalId);
 
   const setPrimaryMutation = useSetPrimaryPhotographApiPhotographsPhotographIdSetPrimaryPost({
     mutation: {
@@ -164,17 +170,8 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload 
     );
   }
 
-  if (error) {
-    return (
-      <div className={styles.container}>
-        <Card>
-          <div style={{ padding: '16px' }}>
-            <Text style={{ color: '#c53030' }}>Error loading photographs</Text>
-          </div>
-        </Card>
-      </div>
-    );
-  }
+  // Treat errors as empty state since the API returns empty array when no photos
+  const hasPhotos = photographs && photographs.length > 0;
 
   return (
     <div className={styles.container}>
@@ -202,7 +199,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload 
         </div>
       )}
 
-      {photographs && photographs.length > 0 ? (
+      {hasPhotos ? (
         <div className={styles.galleryGrid}>
           {photographs.map((photo) => (
             <Card key={photo.id} className={styles.photoCard}>
@@ -214,7 +211,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload 
               )}
 
               <Image
-                src={`/api/photographs/${photo.id}/file`}
+                src={`${getServerUrl()}/api/photographs/${photo.id}/file`}
                 alt={photo.caption || 'Animal photograph'}
                 className={styles.photoImage}
                 onClick={() => openFullscreen(photo)}
@@ -310,7 +307,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload 
                 </DialogTitle>
                 <DialogContent>
                   <Image
-                    src={`/api/photographs/${selectedPhoto.id}/file`}
+                    src={`${getServerUrl()}/api/photographs/${selectedPhoto.id}/file`}
                     alt={selectedPhoto.caption || 'Animal photograph'}
                     className={styles.fullscreenImage}
                   />

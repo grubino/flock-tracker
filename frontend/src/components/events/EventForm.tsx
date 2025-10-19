@@ -89,7 +89,12 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
     mutationFn: (data: EventCreateRequest) => eventsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      navigate('/events');
+      // Navigate back to previous page if coming from animal detail
+      if (preselectedAnimalId) {
+        navigate(-1);
+      } else {
+        navigate('/events');
+      }
     },
   });
 
@@ -97,7 +102,12 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
     mutationFn: (data: EventCreateRequest[]) => eventsApi.createBulk(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
-      navigate('/events');
+      // Navigate back to previous page if coming from animal detail
+      if (preselectedAnimalId) {
+        navigate(-1);
+      } else {
+        navigate('/events');
+      }
     },
   });
 

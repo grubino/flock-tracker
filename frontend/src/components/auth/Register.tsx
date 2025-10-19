@@ -122,6 +122,8 @@ const useStyles = makeStyles({
   },
 });
 
+const DEFAULT_SERVER_URL = import.meta.env.VITE_API_URL || '';
+
 export const Register: React.FC = () => {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -132,6 +134,10 @@ export const Register: React.FC = () => {
     email: '',
     password: '',
     confirmPassword: '',
+  });
+  const [serverUrl, setServerUrl] = useState(() => {
+    // Load from localStorage or use default
+    return localStorage.getItem('server_url') || DEFAULT_SERVER_URL;
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -178,6 +184,9 @@ export const Register: React.FC = () => {
     setLocalLoading(true);
 
     try {
+      // Store the server URL before registering
+      localStorage.setItem('server_url', serverUrl);
+
       await register(formData.email, formData.password, formData.name);
       setSuccess('Account created successfully! Redirecting...');
       setTimeout(() => navigate('/'), 2000);
@@ -262,6 +271,18 @@ export const Register: React.FC = () => {
         )}
 
         <form className={styles.form} onSubmit={handleSubmit}>
+          <div>
+            <Text size={200} style={{ marginBottom: tokens.spacingVerticalXXS, display: 'block', color: tokens.colorNeutralForeground2 }}>
+              Server URL
+            </Text>
+            <Input
+              type="url"
+              placeholder="Server URL (e.g., https://api.example.com)"
+              value={serverUrl}
+              onChange={(e) => setServerUrl(e.target.value)}
+            />
+          </div>
+
           <Input
             type="text"
             placeholder="Full name"

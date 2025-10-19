@@ -13,6 +13,7 @@ import {
 import { animalsApi, eventsApi } from '../../services/api';
 import { AnimalType } from '../../types';
 import { PhotoGallery } from '../PhotoGallery';
+import { FamilyTree } from './FamilyTree';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 const useStyles = makeStyles({
@@ -20,20 +21,41 @@ const useStyles = makeStyles({
     maxWidth: '1200px',
     margin: '0 auto',
     padding: tokens.spacingVerticalXL,
+    '@media (max-width: 768px)': {
+      padding: tokens.spacingVerticalM,
+    },
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacingVerticalL,
+    gap: tokens.spacingHorizontalM,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalM,
+    },
+  },
+  headerButton: {
+    '@media (max-width: 768px)': {
+      width: '100%',
+    },
   },
   card: {
     padding: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      padding: tokens.spacingVerticalM,
+    },
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: '1fr',
+      gap: tokens.spacingVerticalM,
+    },
   },
   field: {
     marginBottom: tokens.spacingVerticalM,
@@ -49,6 +71,11 @@ const useStyles = makeStyles({
   actions: {
     display: 'flex',
     gap: tokens.spacingHorizontalM,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      width: '100%',
+      gap: tokens.spacingVerticalS,
+    },
   },
   eventCard: {
     padding: tokens.spacingVerticalM,
@@ -59,6 +86,10 @@ const useStyles = makeStyles({
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalS,
+    },
   },
   loadingContainer: {
     display: 'flex',
@@ -120,20 +151,20 @@ const AnimalDetail: React.FC = () => {
         </Text>
         <div className={styles.actions}>
           {isCustomer ? (
-            <RouterLink to="/" style={{ textDecoration: 'none' }}>
-              <Button appearance="secondary">
+            <RouterLink to="/" style={{ textDecoration: 'none', flex: 1 }}>
+              <Button appearance="secondary" style={{ width: '100%' }}>
                 Back to Catalog
               </Button>
             </RouterLink>
           ) : (
             <>
-              <RouterLink to={`/animals/${animal.id}/edit`} style={{ textDecoration: 'none' }}>
-                <Button appearance="primary">
+              <RouterLink to={`/animals/${animal.id}/edit`} style={{ textDecoration: 'none', flex: 1 }}>
+                <Button appearance="primary" style={{ width: '100%' }}>
                   Edit
                 </Button>
               </RouterLink>
-              <RouterLink to="/animals" style={{ textDecoration: 'none' }}>
-                <Button appearance="secondary">
+              <RouterLink to="/animals" style={{ textDecoration: 'none', flex: 1 }}>
+                <Button appearance="secondary" style={{ width: '100%' }}>
                   Back to List
                 </Button>
               </RouterLink>
@@ -239,7 +270,7 @@ const AnimalDetail: React.FC = () => {
             <Text as="h2" size={600} weight="semibold">Events</Text>
             {canWrite && (
               <RouterLink to={`/events/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
-                <Button appearance="primary">
+                <Button appearance="primary" className={styles.headerButton}>
                   Add Event
                 </Button>
               </RouterLink>
@@ -278,8 +309,8 @@ const AnimalDetail: React.FC = () => {
                       )}
                     </div>
                     {canWrite && (
-                      <RouterLink to={`/events/${event.id}/edit`} style={{ textDecoration: 'none' }}>
-                        <Button appearance="subtle" size="small">
+                      <RouterLink to={`/events/${event.id}/edit`} style={{ textDecoration: 'none', flex: 1 }}>
+                        <Button appearance="subtle" size="small" style={{ width: '100%' }}>
                           Edit
                         </Button>
                       </RouterLink>
@@ -306,6 +337,9 @@ const AnimalDetail: React.FC = () => {
 
         {/* Photo Gallery Section */}
         <PhotoGallery animalId={animal.id} canUpload={canWrite} />
+
+        {/* Family Tree Section */}
+        <FamilyTree animal={animal} />
       </Card>
     </div>
   );
