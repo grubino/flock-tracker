@@ -7,6 +7,8 @@ import {
   makeStyles,
   tokens,
   Spinner,
+  Radio,
+  RadioGroup,
 } from '@fluentui/react-components';
 import { ArrowUpload24Regular } from '@fluentui/react-icons';
 import { receiptsApi } from '../../services/api';
@@ -77,6 +79,7 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
   const [uploadedReceipt, setUploadedReceipt] = useState<Receipt | null>(null);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr'>('tesseract');
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => receiptsApi.upload(file),
@@ -89,7 +92,7 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
   });
 
   const processMutation = useMutation({
-    mutationFn: (receiptId: number) => receiptsApi.process(receiptId),
+    mutationFn: (receiptId: number) => receiptsApi.process(receiptId, ocrEngine),
     onSuccess: (response) => {
       if (response.data.status === 'completed' && response.data.result) {
         // Synchronous processing - result ready immediately
@@ -229,13 +232,27 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
           )}
 
           {selectedFile && !isLoading && (
-            <Button
-              appearance="primary"
-              onClick={handleUpload}
-              style={{ marginTop: tokens.spacingVerticalM }}
-            >
-              Upload and Process Receipt
-            </Button>
+            <>
+              <div style={{ marginTop: tokens.spacingVerticalM }}>
+                <Text weight="semibold" block style={{ marginBottom: tokens.spacingVerticalS }}>
+                  OCR Engine:
+                </Text>
+                <RadioGroup
+                  value={ocrEngine}
+                  onChange={(_, data) => setOcrEngine(data.value as 'tesseract' | 'easyocr')}
+                >
+                  <Radio value="tesseract" label="Tesseract (Default)" />
+                  <Radio value="easyocr" label="EasyOCR (Better for challenging receipts)" />
+                </RadioGroup>
+              </div>
+              <Button
+                appearance="primary"
+                onClick={handleUpload}
+                style={{ marginTop: tokens.spacingVerticalM }}
+              >
+                Upload and Process Receipt
+              </Button>
+            </>
           )}
 
           {isLoading && (

@@ -7,5 +7,7 @@ from .photograph import Photograph
 from .receipt import Receipt
 from .user import User
 from .vendor import Vendor
+from .product import Product, ProductCategory
+from .order import Order, OrderItem, OrderStatus
 
-__all__ = ["Animal", "AnimalType", "SheepGender", "Event", "EventType", "Expense", "ExpenseCategory", "ExpenseLineItem", "Location", "Photograph", "Receipt", "User", "Vendor"]
+__all__ = ["Animal", "AnimalType", "SheepGender", "Event", "EventType", "Expense", "ExpenseCategory", "ExpenseLineItem", "Location", "Photograph", "Receipt", "User", "Vendor", "Product", "ProductCategory", "Order", "OrderItem", "OrderStatus"]

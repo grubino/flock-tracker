@@ -78,27 +78,37 @@ const useStyles = makeStyles({
   lineItemsTable: {
     tableLayout: 'fixed',
     width: '100%',
-    '& th:nth-of-type(1)': { width: '38%' }, // Description - larger
-    '& th:nth-of-type(2)': { width: '22%' }, // Category
-    '& th:nth-of-type(3)': { width: '10%' }, // Quantity
-    '& th:nth-of-type(4)': { width: '13%' }, // Unit Price
-    '& th:nth-of-type(5)': { width: '7%' },  // Amount - half size
-    '& th:nth-of-type(6)': { width: '10%' }, // Actions
+    '& th:nth-of-type(1)': { width: '40%' }, // Description - larger
+    '& th:nth-of-type(2)': { width: '25%' }, // Category
+    '& th:nth-of-type(3)': { width: '12%' }, // Quantity
+    '& th:nth-of-type(4)': { width: '13%' }, // Amount
+    '& th:nth-of-type(5)': { width: '10%' }, // Actions
     '& input': {
       width: '100%',
       maxWidth: '100%',
       minWidth: 0,
       boxSizing: 'border-box',
     },
-    '& td:nth-of-type(5) input': {
-      paddingLeft: '4px',
-      paddingRight: '4px',
-    },
   },
   actions: {
     display: 'flex',
     gap: tokens.spacingHorizontalM,
     marginTop: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalS,
+    },
+  },
+  lineItemHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: tokens.spacingVerticalS,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalS,
+    },
   },
 });
 
@@ -241,6 +251,19 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
   const handleLineItemChange = (index: number, field: keyof ExpenseLineItemCreate, value: string) => {
     const newLineItems = [...lineItems];
     newLineItems[index] = { ...newLineItems[index], [field]: value };
+
+    // Auto-calculate unit_price when amount or quantity changes
+    const item = newLineItems[index];
+    if (field === 'amount' || field === 'quantity') {
+      const amount = parseFloat(item.amount || '0');
+      const quantity = parseFloat(item.quantity || '0');
+      if (quantity > 0) {
+        item.unit_price = (amount / quantity).toFixed(2);
+      } else {
+        item.unit_price = '0';
+      }
+    }
+
     setLineItems(newLineItems);
 
     // Recalculate total amount
@@ -418,13 +441,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
 
           {/* Line Items Section */}
           <div className={styles.field}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: tokens.spacingVerticalS }}>
+            <div className={styles.lineItemHeader}>
               <Label>Line Items</Label>
               <Button
                 size="small"
                 icon={<Add24Regular />}
                 onClick={handleAddLineItem}
                 type="button"
+                style={{ width: '100%' }}
               >
                 Add Line Item
               </Button>
@@ -437,83 +461,82 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
                     <TableHeaderCell>Description</TableHeaderCell>
                     <TableHeaderCell>Category</TableHeaderCell>
                     <TableHeaderCell>Quantity</TableHeaderCell>
-                    <TableHeaderCell>Unit Price</TableHeaderCell>
-                    <TableHeaderCell>Amount</TableHeaderCell>
+                    <TableHeaderCell>Amount ($)</TableHeaderCell>
                     <TableHeaderCell></TableHeaderCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lineItems.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>
-                        <Input
-                          value={item.description}
-                          onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
-                          placeholder="Item description"
-                          required
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Dropdown
-                          className={styles.dropdown}
-                          value={categoryOptions.find(opt => opt.key === item.category)?.text || ''}
-                          selectedOptions={item.category ? [item.category] : []}
-                          onOptionSelect={(_, data) => handleLineItemChange(index, 'category', data.selectedOptions[0])}
-                        >
-                          {categoryOptions.map(option => (
-                            <Option key={option.key} value={option.key}>
-                              {option.text}
-                            </Option>
-                          ))}
-                        </Dropdown>
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.quantity || ''}
-                          onChange={(e) => handleLineItemChange(index, 'quantity', e.target.value)}
-                          placeholder="Qty"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.unit_price || ''}
-                          onChange={(e) => handleLineItemChange(index, 'unit_price', e.target.value)}
-                          placeholder="Price"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={item.amount}
-                          onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
-                          required
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          icon={<Delete24Regular />}
-                          appearance="subtle"
-                          onClick={() => handleRemoveLineItem(index)}
-                          type="button"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {lineItems.map((item, index) => {
+                    // Unit price is calculated automatically in handleLineItemChange
+                    // when quantity or amount changes
+
+                    return (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <Input
+                            value={item.description}
+                            onChange={(e) => handleLineItemChange(index, 'description', e.target.value)}
+                            placeholder="Item description"
+                            required
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Dropdown
+                            className={styles.dropdown}
+                            value={categoryOptions.find(opt => opt.key === item.category)?.text || ''}
+                            selectedOptions={item.category ? [item.category] : []}
+                            onOptionSelect={(_, data) => handleLineItemChange(index, 'category', data.selectedOptions[0])}
+                          >
+                            {categoryOptions.map(option => (
+                              <Option key={option.key} value={option.key}>
+                                {option.text}
+                              </Option>
+                            ))}
+                          </Dropdown>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.quantity || ''}
+                            onChange={(e) => handleLineItemChange(index, 'quantity', e.target.value)}
+                            placeholder="Qty"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.amount}
+                            onChange={(e) => handleLineItemChange(index, 'amount', e.target.value)}
+                            placeholder="Total"
+                            required
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            icon={<Delete24Regular />}
+                            appearance="subtle"
+                            onClick={() => handleRemoveLineItem(index)}
+                            type="button"
+                            aria-label="Delete line item"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
           </div>
 
           <div className={styles.actions}>
-            <Button type="submit" appearance="primary">
+            <Button type="submit" appearance="primary" style={{ flex: 1, width: '100%' }}>
               {isEdit ? 'Update Expense' : 'Create Expense'}
             </Button>
-            <Button type="button" onClick={() => navigate('/expenses')}>
+            <Button type="button" onClick={() => navigate('/expenses')} style={{ flex: 1, width: '100%' }}>
               Cancel
             </Button>
           </div>

@@ -22,12 +22,28 @@ import type { Event } from '../../types';
 const useStyles = makeStyles({
   container: {
     padding: tokens.spacingVerticalXL,
+    '@media (max-width: 768px)': {
+      padding: tokens.spacingVerticalM,
+    },
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalM,
+    },
+  },
+  headerActions: {
+    display: 'flex',
+    gap: tokens.spacingHorizontalM,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalS,
+    },
   },
   filterSection: {
     marginBottom: tokens.spacingVerticalL,
@@ -40,6 +56,10 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: tokens.spacingHorizontalM,
     marginTop: tokens.spacingVerticalM,
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: '1fr',
+      gap: tokens.spacingVerticalM,
+    },
   },
   filterField: {
     display: 'flex',
@@ -51,6 +71,11 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalS,
     marginTop: tokens.spacingVerticalM,
     alignItems: 'center',
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalS,
+    },
   },
   activeFilters: {
     display: 'flex',
@@ -80,6 +105,10 @@ const useStyles = makeStyles({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: tokens.spacingVerticalS,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalM,
+    },
   },
   eventDetails: {
     display: 'flex',
@@ -89,6 +118,11 @@ const useStyles = makeStyles({
   eventActions: {
     display: 'flex',
     gap: tokens.spacingHorizontalS,
+    '@media (max-width: 768px)': {
+      width: '100%',
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalS,
+    },
   },
   emptyState: {
     textAlign: 'center',
@@ -188,11 +222,18 @@ const EventList: React.FC = () => {
         <Text as="h1" size={800} weight="bold">
           Events
         </Text>
-        <RouterLink to="/events/new" style={{ textDecoration: 'none' }}>
-          <Button appearance="primary">
-            Add Event
-          </Button>
-        </RouterLink>
+        <div className={styles.headerActions}>
+          <RouterLink to="/events/import" style={{ textDecoration: 'none' }}>
+            <Button appearance="secondary" style={{ width: '100%' }}>
+              Import CSV
+            </Button>
+          </RouterLink>
+          <RouterLink to="/events/new" style={{ textDecoration: 'none' }}>
+            <Button appearance="primary" style={{ width: '100%' }}>
+              Add Event
+            </Button>
+          </RouterLink>
+        </div>
       </div>
 
       <Card className={styles.filterSection}>
@@ -321,13 +362,13 @@ const EventList: React.FC = () => {
                   )}
                 </div>
                 <div className={styles.eventActions}>
-                  <RouterLink to={`/events/${event.id}`} style={{ textDecoration: 'none' }}>
-                    <Button appearance="subtle" size="small">
+                  <RouterLink to={`/events/${event.id}`} style={{ textDecoration: 'none', flex: 1 }}>
+                    <Button appearance="subtle" size="small" style={{ width: '100%' }}>
                       View
                     </Button>
                   </RouterLink>
-                  <RouterLink to={`/events/${event.id}/edit`} style={{ textDecoration: 'none' }}>
-                    <Button appearance="secondary" size="small">
+                  <RouterLink to={`/events/${event.id}/edit`} style={{ textDecoration: 'none', flex: 1 }}>
+                    <Button appearance="secondary" size="small" style={{ width: '100%' }}>
                       Edit
                     </Button>
                   </RouterLink>

@@ -1,6 +1,7 @@
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+import logging
 
 from app.database.database import get_db
 from app.schemas.auth import UserCreate, UserLogin, AuthResponse, UserResponse, Token
@@ -12,6 +13,8 @@ from app.services.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES
 )
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -57,18 +60,25 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 @router.post("/login", response_model=AuthResponse)
 async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
     """Login with email and password"""
+    logger.debug(f"Login attempt for email: {user_credentials.email}")
+
     user = authenticate_user(db, user_credentials.email, user_credentials.password)
     if not user:
+        logger.warning(f"Failed login attempt for email: {user_credentials.email}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    logger.debug(f"Successful login for user: {user.email} (role: {user.role.value})")
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.email, "role": user.role.value}, expires_delta=access_token_expires
     )
+
+    logger.debug(f"Access token created for user: {user.email}")
 
     return AuthResponse(
         user=UserResponse.model_validate(user),

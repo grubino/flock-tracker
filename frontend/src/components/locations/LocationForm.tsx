@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
   Text,
@@ -46,13 +46,34 @@ const LocationForm: React.FC<LocationFormProps> = ({ location, isEdit = false })
   const styles = useStyles();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { id } = useParams<{ id: string }>();
+  const locationId = isEdit && id ? parseInt(id) : undefined;
+
+  const { data: fetchedLocation } = useQuery({
+    queryKey: ['location', locationId],
+    queryFn: () => locationsApi.getById(locationId!).then(res => res.data),
+    enabled: isEdit && !!locationId,
+  });
+
+  const currentLocation = location || fetchedLocation;
 
   const [formData, setFormData] = useState<LocationCreateRequest>({
-    name: location?.name || '',
-    address: location?.address || '',
-    paddock_name: location?.paddock_name || '',
-    description: location?.description || '',
+    name: '',
+    address: '',
+    paddock_name: '',
+    description: '',
   });
+
+  useEffect(() => {
+    if (currentLocation) {
+      setFormData({
+        name: currentLocation.name || '',
+        address: currentLocation.address || '',
+        paddock_name: currentLocation.paddock_name || '',
+        description: currentLocation.description || '',
+      });
+    }
+  }, [currentLocation]);
 
   const createMutation = useMutation({
     mutationFn: (data: LocationCreateRequest) => locationsApi.create(data),
@@ -64,9 +85,10 @@ const LocationForm: React.FC<LocationFormProps> = ({ location, isEdit = false })
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<LocationCreateRequest>) =>
-      locationsApi.update(location!.id, data),
+      locationsApi.update(currentLocation!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['locations'] });
+      queryClient.invalidateQueries({ queryKey: ['location', locationId] });
       navigate('/locations');
     },
   });

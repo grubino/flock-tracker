@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from datetime import date
+from typing import List, Optional, Dict, Any
+from datetime import date, datetime
+import csv
+import io
 from app.database.database import get_db
 from app.schemas import Event, EventCreate, EventUpdate, EventWithAnimal, EventBulkCreate
 from app.services.event_service import EventService
@@ -157,3 +159,139 @@ def get_animal_medication_history(animal_id: int, db: Session = Depends(get_db))
     service = EventService(db)
     events = service.get_medication_history(animal_id)
     return events
+
+
+@router.post("/import-csv")
+async def import_events_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
+) -> Dict[str, Any]:
+    """
+    Import events from a CSV file.
+
+    Expected CSV format:
+    - animal_id (or tag_number): ID or tag number of the animal
+    - event_type: Type of event (deworming, lambing, health_check, etc.)
+    - event_date: Date of event (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+    - description (optional): Description of the event
+    - notes (optional): Additional notes
+    - medication_name (optional): Name of medication
+    - dosage (optional): Dosage administered
+    - veterinarian (optional): Veterinarian name
+    - cost (optional): Cost of the treatment
+
+    Returns:
+    - success_count: Number of events successfully imported
+    - error_count: Number of events that failed
+    - errors: List of error messages with row numbers
+    """
+
+    # Validate file type
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV file")
+
+    # Read CSV file
+    try:
+        contents = await file.read()
+        csv_text = contents.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error reading CSV file: {str(e)}")
+
+    # Import events
+    service = EventService(db)
+    success_count = 0
+    error_count = 0
+    errors = []
+    created_events = []
+
+    # Get all animals for tag_number lookup if needed
+    from app.models.animal import Animal
+    animals_by_tag = {animal.tag_number: animal for animal in db.query(Animal).all()}
+
+    for row_num, row in enumerate(csv_reader, start=2):  # Start at 2 to account for header row
+        try:
+            # Get animal_id (either directly or from tag_number)
+            animal_id = None
+            if 'animal_id' in row and row['animal_id']:
+                try:
+                    animal_id = int(row['animal_id'])
+                except ValueError:
+                    errors.append(f"Row {row_num}: Invalid animal_id '{row['animal_id']}'")
+                    error_count += 1
+                    continue
+            elif 'tag_number' in row and row['tag_number']:
+                tag_number = row['tag_number'].strip()
+                if tag_number in animals_by_tag:
+                    animal_id = animals_by_tag[tag_number].id
+                else:
+                    errors.append(f"Row {row_num}: Animal with tag_number '{tag_number}' not found")
+                    error_count += 1
+                    continue
+            else:
+                errors.append(f"Row {row_num}: Missing animal_id or tag_number")
+                error_count += 1
+                continue
+
+            # Validate event_type
+            event_type_str = row.get('event_type', '').strip().upper()
+            try:
+                event_type = EventType[event_type_str]
+            except KeyError:
+                valid_types = ', '.join([e.name for e in EventType])
+                errors.append(f"Row {row_num}: Invalid event_type '{event_type_str}'. Valid types: {valid_types}")
+                error_count += 1
+                continue
+
+            # Parse event_date
+            event_date_str = row.get('event_date', '').strip()
+            if not event_date_str:
+                errors.append(f"Row {row_num}: Missing event_date")
+                error_count += 1
+                continue
+
+            try:
+                # Try parsing with time first
+                try:
+                    event_date = datetime.strptime(event_date_str, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    # Try parsing without time
+                    event_date = datetime.strptime(event_date_str, '%Y-%m-%d')
+            except ValueError:
+                errors.append(f"Row {row_num}: Invalid event_date format '{event_date_str}'. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS")
+                error_count += 1
+                continue
+
+            # Create event object
+            event_data = EventCreate(
+                animal_id=animal_id,
+                event_type=event_type,
+                event_date=event_date,
+                description=row.get('description', '').strip() or None,
+                notes=row.get('notes', '').strip() or None,
+                medication_name=row.get('medication_name', '').strip() or None,
+                dosage=row.get('dosage', '').strip() or None,
+                veterinarian=row.get('veterinarian', '').strip() or None,
+                cost=row.get('cost', '').strip() or None
+            )
+
+            # Create the event
+            created_event = service.create_event(event_data)
+            created_events.append(created_event)
+            success_count += 1
+
+        except Exception as e:
+            errors.append(f"Row {row_num}: {str(e)}")
+            error_count += 1
+
+    # Convert created events to Pydantic schemas for serialization
+    created_events_schemas = [Event.model_validate(event) for event in created_events[:10]]
+
+    return {
+        "success_count": success_count,
+        "error_count": error_count,
+        "total_rows": success_count + error_count,
+        "errors": errors,
+        "created_events": created_events_schemas  # Return first 10 created events as examples
+    }

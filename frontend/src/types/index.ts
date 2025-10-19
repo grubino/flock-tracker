@@ -38,11 +38,24 @@ export const ExpenseCategory = {
   OTHER: "other"
 } as const;
 
+export const ProductCategory = {
+  PET_FOOD: "pet_food",
+  EGGS: "eggs",
+  WOOL: "wool",
+  HONEY: "honey",
+  DAIRY: "dairy",
+  VEGETABLES: "vegetables",
+  FRUITS: "fruits",
+  PROCESSED: "processed",
+  OTHER: "other"
+} as const;
+
 export type AnimalType = typeof AnimalType[keyof typeof AnimalType];
 export type SheepGender = typeof SheepGender[keyof typeof SheepGender];
 export type ChickenGender = typeof ChickenGender[keyof typeof ChickenGender];
 export type EventType = typeof EventType[keyof typeof EventType];
 export type ExpenseCategory = typeof ExpenseCategory[keyof typeof ExpenseCategory];
+export type ProductCategory = typeof ProductCategory[keyof typeof ProductCategory];
 
 export interface Photograph {
   id: number;
@@ -233,4 +246,32 @@ export interface OCRResult {
   }>;
   total?: string;
   date?: string;
+}
+
+export interface Product {
+  id: number;
+  name: string;
+  description?: string;
+  category: ProductCategory;
+  price: number;
+  inventory_quantity: number;
+  unit: string;
+  sku?: string;
+  image_url?: string;
+  is_active: boolean;
+  created_by_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductCreateRequest {
+  name: string;
+  description?: string;
+  category: ProductCategory;
+  price: number;
+  inventory_quantity: number;
+  unit: string;
+  sku?: string;
+  image_url?: string;
+  is_active?: boolean;
 }

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Flock Tracker</string>
+    <string name="title_activity_main">Flock Tracker</string>
+    <string name="package_name">com.flocktracker.app</string>
+    <string name="custom_url_scheme">com.flocktracker.app</string>
+</resources>

@@ -15,6 +15,8 @@ import {
 import { animalsApi, locationsApi } from '../../services/api';
 import { AnimalType, SheepGender, ChickenGender } from '../../types';
 import type { AnimalCreateRequest, Animal } from '../../types';
+import { PhotoGallery } from '../PhotoGallery';
+import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface AnimalFormProps {
   animal?: Animal;
@@ -55,6 +57,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
   const queryClient = useQueryClient();
   const { id } = useParams<{ id: string }>();
   const animalId = isEdit && id ? parseInt(id) : undefined;
+  const { canWrite } = useRoleAccess();
 
   const { data: fetchedAnimal } = useQuery({
     queryKey: ['animal', animalId],
@@ -346,6 +349,13 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
           </div>
         </form>
       </Card>
+
+      {/* Photo Gallery - only show in edit mode */}
+      {isEdit && animalId && (
+        <Card style={{ marginTop: tokens.spacingVerticalXL }}>
+          <PhotoGallery animalId={animalId} canUpload={canWrite} />
+        </Card>
+      )}
     </div>
   );
 };

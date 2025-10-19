@@ -17,7 +17,8 @@ import {
   SignOut20Regular,
   Settings20Regular,
   Money20Regular,
-  Building20Regular
+  Building20Regular,
+  ShoppingBag20Regular
 } from '@fluentui/react-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -165,6 +166,11 @@ const SideNavigation: React.FC<SideNavigationProps> = ({ isOpen, onClose }) => {
       path: '/animals',
       label: 'Animals',
       icon: <AnimalRabbit20Regular />,
+    },
+    {
+      path: '/products',
+      label: 'Products',
+      icon: <ShoppingBag20Regular />,
     },
     {
       path: '/events',

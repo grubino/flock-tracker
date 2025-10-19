@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import axios from 'axios';
+// axios is mocked via vi.mock below
 
 // Create mock before vi.mock
 let mockAxiosInstance: any;

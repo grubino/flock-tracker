@@ -15,20 +15,35 @@ import type { Location } from '../../types';
 const useStyles = makeStyles({
   container: {
     padding: tokens.spacingVerticalXL,
+    '@media (max-width: 768px)': {
+      padding: tokens.spacingVerticalM,
+    },
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalM,
+    },
   },
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
     gap: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: '1fr',
+      gap: tokens.spacingVerticalM,
+    },
   },
   card: {
     padding: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      padding: tokens.spacingVerticalM,
+    },
   },
   cardDetails: {
     display: 'flex',
@@ -40,6 +55,10 @@ const useStyles = makeStyles({
   cardActions: {
     display: 'flex',
     gap: tokens.spacingHorizontalM,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      gap: tokens.spacingVerticalS,
+    },
   },
   emptyState: {
     textAlign: 'center',
@@ -82,8 +101,8 @@ const LocationList: React.FC = () => {
         <Text as="h1" size={800} weight="bold">
           Locations
         </Text>
-        <RouterLink to="/locations/new" style={{ textDecoration: 'none' }}>
-          <Button appearance="primary">
+        <RouterLink to="/locations/new" style={{ textDecoration: 'none', flex: 1 }}>
+          <Button appearance="primary" style={{ width: '100%' }}>
             Add Location
           </Button>
         </RouterLink>
@@ -117,13 +136,13 @@ const LocationList: React.FC = () => {
                 </div>
 
                 <div className={styles.cardActions} style={{ marginTop: '16px' }}>
-                  <RouterLink to={`/locations/${location.id}`} style={{ textDecoration: 'none' }}>
-                    <Button appearance="primary" size="small">
+                  <RouterLink to={`/locations/${location.id}`} style={{ textDecoration: 'none', flex: 1 }}>
+                    <Button appearance="primary" size="small" style={{ width: '100%' }}>
                       View
                     </Button>
                   </RouterLink>
-                  <RouterLink to={`/locations/${location.id}/edit`} style={{ textDecoration: 'none' }}>
-                    <Button appearance="secondary" size="small">
+                  <RouterLink to={`/locations/${location.id}/edit`} style={{ textDecoration: 'none', flex: 1 }}>
+                    <Button appearance="secondary" size="small" style={{ width: '100%' }}>
                       Edit
                     </Button>
                   </RouterLink>

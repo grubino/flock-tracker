@@ -1,18 +1,21 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from starlette.testclient import TestClient
+from fastapi.testclient import TestClient
 
+# Import models FIRST to ensure they're registered with SQLAlchemy before creating engine
+from app.models import *
 from app.database.database import Base, get_db
 from app.main import app
 
 
 # Use in-memory SQLite database for tests
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+# Use a shared cache to ensure all connections see the same database
+SQLALCHEMY_DATABASE_URL = "sqlite:///file:testdb?mode=memory&cache=shared"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    connect_args={"check_same_thread": False, "uri": True}
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

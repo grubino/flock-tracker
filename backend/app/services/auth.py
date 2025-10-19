@@ -5,11 +5,14 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
+import logging
 
 from app.config import settings
 from app.database.database import get_db
 from app.models.user import User, UserRole
 from app.schemas.auth import TokenData
+
+logger = logging.getLogger(__name__)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -75,13 +78,20 @@ def get_user_by_email(db: Session, email: str) -> Optional[User]:
 
 def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
     """Authenticate a user with email and password"""
+    logger.debug(f"Authenticating user: {email}")
+
     user = get_user_by_email(db, email)
     if not user:
+        logger.debug(f"User not found: {email}")
         return None
     if not user.hashed_password:  # OAuth user trying to login with password
+        logger.debug(f"User {email} has no password (OAuth user)")
         return None
     if not verify_password(password, user.hashed_password):
+        logger.debug(f"Invalid password for user: {email}")
         return None
+
+    logger.debug(f"User authenticated successfully: {email}")
     return user
 
 
@@ -148,16 +158,27 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ) -> User:
     """Get the current authenticated user"""
+    logger.debug("Verifying user credentials from token")
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    token_data = verify_token(credentials.credentials, credentials_exception)
+    try:
+        token_data = verify_token(credentials.credentials, credentials_exception)
+        logger.debug(f"Token validated for user: {token_data.email}")
+    except Exception as e:
+        logger.warning(f"Token validation failed: {e}")
+        raise
+
     user = get_user_by_email(db, email=token_data.email)
     if user is None:
+        logger.warning(f"User not found for validated token: {token_data.email}")
         raise credentials_exception
+
+    logger.debug(f"Current user retrieved: {user.email}")
     return user
 
 

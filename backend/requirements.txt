@@ -18,3 +18,6 @@ celery==5.3.4
 redis==5.0.1
 pandas==2.1.4
 rapidfuzz==3.6.1
+httpx<0.25.0
+easyocr==1.7.0  # Alternative to PaddleOCR, more stable
+pymupdf>=1.23.0  # Install newer version with wheels

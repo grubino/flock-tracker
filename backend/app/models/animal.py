@@ -25,6 +25,7 @@ class Animal(Base):
     animal_type = Column(SQLEnum(AnimalType), nullable=False)
     sheep_gender = Column(SQLEnum(SheepGender), nullable=True)
     birth_date = Column(DateTime, nullable=True)
+    is_sellable = Column(Boolean, default=False)
 
     # Current location
     current_location_id = Column(Integer, ForeignKey("locations.id"), nullable=True)

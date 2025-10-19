@@ -4,6 +4,7 @@ from typing import List
 import os
 import shutil
 from pathlib import Path
+import logging
 
 from app.database.database import get_db
 from app.models.receipt import Receipt
@@ -11,6 +12,8 @@ from app.models.vendor import Vendor
 from app.schemas.receipt import ReceiptResponse, OCRResult
 from app.routers.auth import get_current_active_user
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 # Initialize Celery client (don't import worker tasks)
 from celery import Celery
@@ -35,13 +38,14 @@ if CELERY_AVAILABLE:
         enable_utc=True,
         result_extended=True,  # Include more metadata in results
     )
-    print(f"✓ Celery client initialized with broker: {REDIS_URL[:20]}...")
+    logger.info(f"Celery client initialized with broker: {REDIS_URL[:20]}...")
 else:
     celery_app = None
-    print("✗ REDIS_URL not set - Celery unavailable, will use synchronous processing")
+    logger.warning("REDIS_URL not set - Celery unavailable, will use synchronous processing")
     # Import services for fallback
     from app.services.ocr_service import OCRService
     from app.services.ocr_layout_service import OCRLayoutService
+    from app.services.ocr_easyocr_service import OCREasyOCRService
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
@@ -81,8 +85,9 @@ async def upload_receipt(
     try:
         file_data = await file.read()
         file_size = len(file_data)
-        print(f"✓ File uploaded: {file.filename} (size: {file_size} bytes)")
+        logger.info(f"File uploaded: {file.filename} (size: {file_size} bytes)")
     except Exception as e:
+        logger.error(f"Error reading file {file.filename}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error reading file: {str(e)}"
@@ -99,7 +104,7 @@ async def upload_receipt(
     db.commit()
     db.refresh(receipt)
 
-    print(f"✓ Receipt saved to database: ID={receipt.id}")
+    logger.info(f"Receipt saved to database: ID={receipt.id}, filename={receipt.filename}")
 
     return receipt
 
@@ -141,10 +146,17 @@ async def celery_status(current_user: User = Depends(get_current_active_user)):
 @router.post("/{receipt_id}/process")
 async def process_receipt(
     receipt_id: int,
+    ocr_engine: str = "tesseract",  # Options: "tesseract" or "easyocr"
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Process a receipt with OCR and extract structured data (async with Celery)"""
+    """
+    Process a receipt with OCR and extract structured data (async with Celery)
+
+    Args:
+        receipt_id: ID of the receipt to process
+        ocr_engine: OCR engine to use - "tesseract" (default) or "easyocr"
+    """
 
     receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
     if not receipt:
@@ -161,14 +173,23 @@ async def process_receipt(
             'result': result
         }
 
+    # Validate OCR engine
+    if ocr_engine not in ["tesseract", "easyocr"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OCR engine. Choose 'tesseract' or 'easyocr'"
+        )
+
     try:
         if CELERY_AVAILABLE:
             # Queue OCR processing task by name (worker will handle it)
-            task = celery_app.send_task('workers.tasks.process_receipt_ocr', args=[receipt_id])
+            # TODO: Update worker to support ocr_engine parameter
+            task = celery_app.send_task('workers.tasks.process_receipt_ocr', args=[receipt_id, ocr_engine])
             return {
                 'status': 'processing',
                 'task_id': task.id,
-                'message': 'OCR processing started'
+                'message': f'OCR processing started with {ocr_engine}',
+                'ocr_engine': ocr_engine
             }
         else:
             # Fallback to synchronous processing
@@ -192,13 +213,25 @@ async def process_receipt(
                 vendors = db.query(Vendor).all()
                 known_vendor_names = [v.name for v in vendors]
 
-                # Use Tesseract with layout service
-                raw_text = OCRService.extract_text(temp_path, receipt.file_type)
-                extracted_data = OCRLayoutService.parse_receipt_with_layout(
-                    temp_path,
-                    receipt.file_type,
-                    known_vendor_names
-                )
+                # Choose OCR engine
+                if ocr_engine == "easyocr":
+                    logger.info(f"Using EasyOCR for receipt {receipt_id}")
+                    extracted_data = OCREasyOCRService.parse_receipt_with_easyocr(
+                        temp_path,
+                        receipt.file_type,
+                        known_vendor_names
+                    )
+                    # EasyOCR doesn't return separate raw_text, construct it from lines
+                    raw_text = "\n".join([item['description'] for item in extracted_data.get('items', [])])
+                else:  # tesseract (default)
+                    logger.info(f"Using Tesseract for receipt {receipt_id}")
+                    raw_text = OCRService.extract_text(temp_path, receipt.file_type)
+                    extracted_data = OCRLayoutService.parse_receipt_with_layout(
+                        temp_path,
+                        receipt.file_type,
+                        known_vendor_names
+                    )
+                    extracted_data['ocr_engine'] = 'tesseract'
 
                 receipt.raw_text = raw_text
                 receipt.extracted_data = extracted_data
@@ -215,7 +248,8 @@ async def process_receipt(
             return {
                 'status': 'completed',
                 'task_id': None,
-                'result': result
+                'result': result,
+                'ocr_engine': ocr_engine
             }
 
     except Exception as e:
@@ -330,8 +364,9 @@ def delete_receipt(
             os.remove(receipt.file_path)
     except Exception as e:
         # Log error but continue with database deletion
-        print(f"Error deleting file: {str(e)}")
+        logger.warning(f"Error deleting file for receipt {receipt_id}: {str(e)}")
 
     db.delete(receipt)
     db.commit()
+    logger.info(f"Receipt deleted: ID={receipt_id}")
     return {"message": "Receipt deleted successfully"}

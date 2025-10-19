@@ -5,16 +5,31 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
 import os
+import argparse
+import sys
 from pathlib import Path
 from app.config import settings
 from app.database.database import create_tables, SessionLocal
-from app.routers import animals_router, events_router, expenses_router, locations_router, photographs_router, auth_router, admin_router, vendors_router, receipts_router
-from app.models import User  # Import User model to ensure it's registered with SQLAlchemy
+from app.routers import animals_router, events_router, expenses_router, locations_router, photographs_router, auth_router, admin_router, vendors_router, receipts_router, products_router, orders_router
+from app.models import *  # Import all models to ensure they're registered with SQLAlchemy
 from app.services.auth import create_admin_user
 
+# Parse command line arguments for log level
+parser = argparse.ArgumentParser(description='Flock Tracker API Server')
+parser.add_argument('--log-level', type=str,
+                   choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                   default='INFO',
+                   help='Set the logging level (default: INFO)')
+args, unknown = parser.parse_known_args()
+
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+log_level = getattr(logging, args.log_level.upper())
+logging.basicConfig(
+    level=log_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+logger.info(f"Logging configured at {args.log_level} level")
 
 
 @asynccontextmanager
@@ -85,6 +100,23 @@ app.add_middleware(
 )
 
 
+# Request logging middleware
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all incoming requests for debugging"""
+    logger.debug(f"Incoming request: {request.method} {request.url.path}")
+    logger.debug(f"Headers: {dict(request.headers)}")
+    logger.debug(f"Client: {request.client.host if request.client else 'unknown'}:{request.client.port if request.client else 'unknown'}")
+
+    try:
+        response = await call_next(request)
+        logger.debug(f"Response status: {response.status_code}")
+        return response
+    except Exception as e:
+        logger.error(f"Request processing error: {e}", exc_info=True)
+        raise
+
+
 # Exception handlers
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -104,6 +136,8 @@ app.include_router(expenses_router, prefix="/api")
 app.include_router(vendors_router, prefix="/api")
 app.include_router(receipts_router, prefix="/api")
 app.include_router(locations_router, prefix="/api")
+app.include_router(products_router)
+app.include_router(orders_router)
 app.include_router(photographs_router)
 
 # API and health endpoints (before static file mounting)
@@ -181,10 +215,26 @@ async def serve_spa(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
+
+    # Check if SSL certificates exist
+    cert_path = Path(__file__).parent.parent / "certs" / "cert.pem"
+    key_path = Path(__file__).parent.parent / "certs" / "key.pem"
+
+    ssl_config = {}
+    if cert_path.exists() and key_path.exists():
+        logger.info("Starting server with HTTPS enabled")
+        ssl_config = {
+            "ssl_keyfile": str(key_path),
+            "ssl_certfile": str(cert_path)
+        }
+    else:
+        logger.warning("SSL certificates not found, starting with HTTP")
+
     uvicorn.run(
         "app.main:app",
         host=settings.host,
         port=settings.port,
         reload=settings.debug,
-        log_level="info"
+        log_level=args.log_level.lower(),
+        **ssl_config
     )

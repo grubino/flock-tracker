@@ -32,18 +32,30 @@ const useStyles = makeStyles({
     maxWidth: '1400px',
     margin: '0 auto',
     padding: tokens.spacingVerticalXL,
+    '@media (max-width: 768px)': {
+      padding: tokens.spacingVerticalM,
+    },
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      flexDirection: 'column',
+      alignItems: 'stretch',
+      gap: tokens.spacingVerticalM,
+    },
   },
   filters: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: tokens.spacingHorizontalM,
     marginBottom: tokens.spacingVerticalL,
+    '@media (max-width: 768px)': {
+      gridTemplateColumns: '1fr',
+      gap: tokens.spacingVerticalM,
+    },
   },
   field: {
     display: 'flex',
@@ -129,6 +141,7 @@ const ExpenseList: React.FC = () => {
           appearance="primary"
           icon={<Add24Regular />}
           onClick={() => navigate('/expenses/new')}
+          style={{ width: '100%' }}
         >
           Add Expense
         </Button>
