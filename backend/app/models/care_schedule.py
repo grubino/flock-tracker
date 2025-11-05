@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
 
-from ..database.database import Base
+from app.database.database import Base
 
 
 class CareType(str, enum.Enum):
