@@ -1,41 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-// axios is mocked via vi.mock below
+import axios from 'axios';
 
-// Create mock before vi.mock
-let mockAxiosInstance: any;
-
-vi.mock('axios', () => {
-  const mockInstance: any = vi.fn();
-  mockInstance.interceptors = {
-    request: {
-      use: vi.fn((onFulfilled: any) => {
-        mockInstance._requestInterceptor = onFulfilled;
-        return 0;
-      }),
-    },
-    response: {
-      use: vi.fn((onFulfilled: any, onRejected: any) => {
-        mockInstance._responseSuccessInterceptor = onFulfilled;
-        mockInstance._responseErrorInterceptor = onRejected;
-        return 0;
-      }),
-    },
-  };
-  mockInstance._requestInterceptor = null;
-  mockInstance._responseSuccessInterceptor = null;
-  mockInstance._responseErrorInterceptor = null;
-
-  return {
-    default: {
-      create: vi.fn(() => mockInstance),
-    },
-  };
-});
-
+// Import after axios is mocked globally in setup.ts
 import axiosInstance, { apiClient } from './api-client';
 
-// Get reference to the mock instance after import
-mockAxiosInstance = axiosInstance;
+// Get reference to the mocked axios
+const mockAxios = axios as any;
 
 describe('api-client', () => {
   beforeEach(() => {
@@ -184,20 +154,20 @@ describe('api-client', () => {
       const mockData = { id: 1, name: 'Test' };
       const mockResponse = { data: mockData };
 
-      mockAxiosInstance.mockResolvedValueOnce(mockResponse);
+      vi.mocked(axiosInstance).mockResolvedValueOnce(mockResponse);
 
       const config = { url: '/api/test', method: 'GET' };
       const result = await apiClient(config);
 
       expect(result).toEqual(mockData);
-      expect(mockAxiosInstance).toHaveBeenCalledWith(config);
+      expect(axiosInstance).toHaveBeenCalledWith(config);
     });
 
     it('should handle POST requests', async () => {
       const mockData = { id: 1, name: 'Created' };
       const mockResponse = { data: mockData };
 
-      mockAxiosInstance.mockResolvedValueOnce(mockResponse);
+      vi.mocked(axiosInstance).mockResolvedValueOnce(mockResponse);
 
       const config = {
         url: '/api/test',
@@ -208,13 +178,13 @@ describe('api-client', () => {
       const result = await apiClient(config);
 
       expect(result).toEqual(mockData);
-      expect(mockAxiosInstance).toHaveBeenCalledWith(config);
+      expect(axiosInstance).toHaveBeenCalledWith(config);
     });
 
     it('should propagate errors', async () => {
       const mockError = new Error('Request failed');
 
-      mockAxiosInstance.mockRejectedValueOnce(mockError);
+      vi.mocked(axiosInstance).mockRejectedValueOnce(mockError);
 
       const config = { url: '/api/test', method: 'GET' };
 
