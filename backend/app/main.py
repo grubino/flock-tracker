@@ -163,6 +163,23 @@ async def health_check():
         "version": settings.version
     }
 
+@app.get("/download/apk", tags=["Downloads"])
+async def download_apk():
+    """Download the Android APK file"""
+    apk_path = Path(__file__).parent.parent.parent / "frontend" / "android" / "app" / "build" / "outputs" / "apk" / "debug" / "app-debug.apk"
+
+    if not apk_path.exists():
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "APK file not found. Please build the Android app first."}
+        )
+
+    return FileResponse(
+        path=str(apk_path),
+        filename="flock-tracker.apk",
+        media_type="application/vnd.android.package-archive"
+    )
+
 # Static file serving - mount after API routes but before catch-all
 static_dir = Path(__file__).parent.parent / "static"
 if static_dir.exists():

@@ -14,6 +14,7 @@ import {
   PersonAdd24Regular,
   Eye24Regular,
   EyeOff24Regular,
+  ArrowDownload24Regular,
 } from '@fluentui/react-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import type { User } from '../../contexts/AuthContext';
@@ -90,6 +91,12 @@ const useStyles = makeStyles({
   footer: {
     textAlign: 'center',
     marginTop: tokens.spacingVerticalL,
+  },
+  downloadSection: {
+    textAlign: 'center',
+    marginTop: tokens.spacingVerticalL,
+    paddingTop: tokens.spacingVerticalL,
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   error: {
     color: tokens.colorPaletteRedForeground1,
@@ -383,6 +390,20 @@ export const Register: React.FC = () => {
               Sign in
             </RouterLink>
           </Text>
+        </div>
+
+        <div className={styles.downloadSection}>
+          <Text size={200} style={{ marginBottom: tokens.spacingVerticalS, display: 'block', color: tokens.colorNeutralForeground2 }}>
+            Download the Android app
+          </Text>
+          <Button
+            as="a"
+            href={`${serverUrl}/download/apk`}
+            icon={<ArrowDownload24Regular />}
+            appearance="subtle"
+          >
+            Download APK
+          </Button>
         </div>
       </Card>
     </div>
