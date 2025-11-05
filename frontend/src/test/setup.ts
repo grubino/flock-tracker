@@ -2,48 +2,59 @@ import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
-// Mock axios globally before any imports that might use it
-vi.mock('axios', () => {
-  const mockAxios: any = {
-    create: vi.fn(function(this: any) {
-      return this;
-    }),
-    get: vi.fn(() => Promise.resolve({ data: {} })),
-    post: vi.fn(() => Promise.resolve({ data: {} })),
-    put: vi.fn(() => Promise.resolve({ data: {} })),
-    delete: vi.fn(() => Promise.resolve({ data: {} })),
-    patch: vi.fn(() => Promise.resolve({ data: {} })),
-    request: vi.fn(() => Promise.resolve({ data: {} })),
-    interceptors: {
-      request: {
-        use: vi.fn((onFulfilled: any) => {
-          mockAxios._requestInterceptor = onFulfilled;
-          return 0;
-        }),
-        eject: vi.fn(),
-      },
-      response: {
-        use: vi.fn((onFulfilled: any, onRejected: any) => {
-          mockAxios._responseSuccessInterceptor = onFulfilled;
-          mockAxios._responseErrorInterceptor = onRejected;
-          return 0;
-        }),
-        eject: vi.fn(),
-      },
+// Create a mock axios instance that will be shared
+const createMockAxios = () => {
+  const mockInstance: any = vi.fn();
+
+  // Add all the methods
+  mockInstance.get = vi.fn(() => Promise.resolve({ data: {} }));
+  mockInstance.post = vi.fn(() => Promise.resolve({ data: {} }));
+  mockInstance.put = vi.fn(() => Promise.resolve({ data: {} }));
+  mockInstance.delete = vi.fn(() => Promise.resolve({ data: {} }));
+  mockInstance.patch = vi.fn(() => Promise.resolve({ data: {} }));
+  mockInstance.request = vi.fn(() => Promise.resolve({ data: {} }));
+
+  // Add interceptors
+  mockInstance.interceptors = {
+    request: {
+      use: vi.fn((onFulfilled: any) => {
+        mockInstance._requestInterceptor = onFulfilled;
+        return 0;
+      }),
+      eject: vi.fn(),
     },
-    defaults: {
-      headers: {
-        common: {},
-      },
+    response: {
+      use: vi.fn((onFulfilled: any, onRejected: any) => {
+        mockInstance._responseSuccessInterceptor = onFulfilled;
+        mockInstance._responseErrorInterceptor = onRejected;
+        return 0;
+      }),
+      eject: vi.fn(),
     },
-    _requestInterceptor: null,
-    _responseSuccessInterceptor: null,
-    _responseErrorInterceptor: null,
   };
 
-  // Make create return the same mockAxios instance
-  mockAxios.create.mockReturnValue(mockAxios);
+  // Add defaults
+  mockInstance.defaults = {
+    headers: {
+      common: {},
+    },
+  };
 
+  // Store interceptor functions for test access
+  mockInstance._requestInterceptor = null;
+  mockInstance._responseSuccessInterceptor = null;
+  mockInstance._responseErrorInterceptor = null;
+
+  // Make mockInstance callable as a function
+  mockInstance.mockImplementation(() => Promise.resolve({ data: {} }));
+
+  return mockInstance;
+};
+
+// Mock axios module
+vi.mock('axios', () => {
+  const mockAxios = createMockAxios();
+  mockAxios.create = vi.fn(() => mockAxios);
   return {
     default: mockAxios,
   };

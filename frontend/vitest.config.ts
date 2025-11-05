@@ -9,6 +9,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: true,
+    // Prevent actual network requests
+    mockReset: true,
+    restoreMocks: true,
   },
   resolve: {
     alias: {
