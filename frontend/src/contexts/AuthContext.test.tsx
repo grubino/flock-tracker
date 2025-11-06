@@ -1,24 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-
-// Mock the api module BEFORE importing AuthContext to prevent actual HTTP calls
-vi.mock('../services/api', () => ({
-  default: {
-    post: vi.fn(() => Promise.resolve({ data: {} })),
-    get: vi.fn(() => Promise.resolve({ data: {} })),
-    put: vi.fn(() => Promise.resolve({ data: {} })),
-    delete: vi.fn(() => Promise.resolve({ data: {} })),
-    interceptors: {
-      request: { use: vi.fn(), eject: vi.fn() },
-      response: { use: vi.fn(), eject: vi.fn() },
-    },
-  },
-}));
-
-// Now import after the mock is set up
 import { AuthProvider, useAuth } from './AuthContext';
 import api from '../services/api';
+
+// Type the mock api for tests
 const mockApi = api as any;
 
 const wrapper = ({ children }: { children: ReactNode }) => (

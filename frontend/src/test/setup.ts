@@ -2,63 +2,138 @@ import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
-// Create a mock axios instance that will be shared
-const createMockAxios = () => {
-  const mockInstance: any = vi.fn();
+// Create hoisted mocks to ensure they're applied before any imports
+const { mockOfflineQueue, mockAxios, mockApi, mockAnimalsApi, mockEventsApi, mockLocationsApi, mockExpensesApi, mockProductsApi } = vi.hoisted(() => {
+  // Create mock axios instance
+  const createMockAxiosInstance = () => {
+    const instance: any = vi.fn(() => Promise.resolve({ data: {} }));
 
-  // Add all the methods
-  mockInstance.get = vi.fn(() => Promise.resolve({ data: {} }));
-  mockInstance.post = vi.fn(() => Promise.resolve({ data: {} }));
-  mockInstance.put = vi.fn(() => Promise.resolve({ data: {} }));
-  mockInstance.delete = vi.fn(() => Promise.resolve({ data: {} }));
-  mockInstance.patch = vi.fn(() => Promise.resolve({ data: {} }));
-  mockInstance.request = vi.fn(() => Promise.resolve({ data: {} }));
+    // Add HTTP methods
+    instance.get = vi.fn(() => Promise.resolve({ data: {} }));
+    instance.post = vi.fn(() => Promise.resolve({ data: {} }));
+    instance.put = vi.fn(() => Promise.resolve({ data: {} }));
+    instance.delete = vi.fn(() => Promise.resolve({ data: {} }));
+    instance.patch = vi.fn(() => Promise.resolve({ data: {} }));
+    instance.request = vi.fn(() => Promise.resolve({ data: {} }));
 
-  // Add interceptors
-  mockInstance.interceptors = {
-    request: {
-      use: vi.fn((onFulfilled: any) => {
-        mockInstance._requestInterceptor = onFulfilled;
-        return 0;
-      }),
-      eject: vi.fn(),
-    },
-    response: {
-      use: vi.fn((onFulfilled: any, onRejected: any) => {
-        mockInstance._responseSuccessInterceptor = onFulfilled;
-        mockInstance._responseErrorInterceptor = onRejected;
-        return 0;
-      }),
-      eject: vi.fn(),
-    },
+    // Store interceptor callbacks for testing
+    instance._requestInterceptor = null;
+    instance._responseSuccessInterceptor = null;
+    instance._responseErrorInterceptor = null;
+
+    // Add interceptors that store the callbacks
+    instance.interceptors = {
+      request: {
+        use: vi.fn((onFulfilled: any, onRejected: any) => {
+          instance._requestInterceptor = onFulfilled;
+          instance._requestInterceptorError = onRejected;
+          return 0;
+        }),
+        eject: vi.fn(),
+      },
+      response: {
+        use: vi.fn((onFulfilled: any, onRejected: any) => {
+          instance._responseSuccessInterceptor = onFulfilled;
+          instance._responseErrorInterceptor = onRejected;
+          return 0;
+        }),
+        eject: vi.fn(),
+      },
+    };
+
+    // Add defaults
+    instance.defaults = {
+      headers: {
+        common: {},
+      },
+    };
+
+    return instance;
   };
 
-  // Add defaults
-  mockInstance.defaults = {
-    headers: {
-      common: {},
-    },
-  };
+  const mockAxiosInstance = createMockAxiosInstance();
 
-  // Store interceptor functions for test access
-  mockInstance._requestInterceptor = null;
-  mockInstance._responseSuccessInterceptor = null;
-  mockInstance._responseErrorInterceptor = null;
-
-  // Make mockInstance callable as a function
-  mockInstance.mockImplementation(() => Promise.resolve({ data: {} }));
-
-  return mockInstance;
-};
-
-// Mock axios module
-vi.mock('axios', () => {
-  const mockAxios = createMockAxios();
-  mockAxios.create = vi.fn(() => mockAxios);
   return {
-    default: mockAxios,
+    mockOfflineQueue: {
+      addRequest: vi.fn(),
+      processQueue: vi.fn(),
+      getQueueSize: vi.fn(() => 0),
+    },
+    mockAxios: {
+      ...mockAxiosInstance,
+      create: vi.fn(() => createMockAxiosInstance()),
+      AxiosError: class AxiosError extends Error {
+        constructor(message: string) {
+          super(message);
+          this.name = 'AxiosError';
+        }
+      },
+    },
+    mockApi: mockAxiosInstance,
+    mockAnimalsApi: {
+      getAll: vi.fn(() => Promise.resolve({ data: [] })),
+      getById: vi.fn(() => Promise.resolve({ data: {} })),
+      getByTag: vi.fn(() => Promise.resolve({ data: {} })),
+      create: vi.fn(() => Promise.resolve({ data: {} })),
+      update: vi.fn(() => Promise.resolve({ data: {} })),
+      delete: vi.fn(() => Promise.resolve({ data: {} })),
+      importCSV: vi.fn(() => Promise.resolve({ data: { success_count: 0, error_count: 0, total_rows: 0, errors: [], created_animals: [] } })),
+    },
+    mockEventsApi: {
+      getAll: vi.fn(() => Promise.resolve({ data: [] })),
+      getById: vi.fn(() => Promise.resolve({ data: {} })),
+      getByAnimal: vi.fn(() => Promise.resolve({ data: [] })),
+      create: vi.fn(() => Promise.resolve({ data: {} })),
+      createBulk: vi.fn(() => Promise.resolve({ data: [] })),
+      update: vi.fn(() => Promise.resolve({ data: {} })),
+      delete: vi.fn(() => Promise.resolve({ data: {} })),
+      importCSV: vi.fn(() => Promise.resolve({ data: { success_count: 0, error_count: 0, total_rows: 0, errors: [], created_events: [] } })),
+    },
+    mockLocationsApi: {
+      getAll: vi.fn(() => Promise.resolve({ data: [] })),
+      getById: vi.fn(() => Promise.resolve({ data: {} })),
+      getByAnimal: vi.fn(() => Promise.resolve({ data: [] })),
+      create: vi.fn(() => Promise.resolve({ data: {} })),
+      update: vi.fn(() => Promise.resolve({ data: {} })),
+      delete: vi.fn(() => Promise.resolve({ data: {} })),
+    },
+    mockExpensesApi: {
+      getAll: vi.fn(() => Promise.resolve({ data: [] })),
+      getById: vi.fn(() => Promise.resolve({ data: {} })),
+      create: vi.fn(() => Promise.resolve({ data: {} })),
+      update: vi.fn(() => Promise.resolve({ data: {} })),
+      delete: vi.fn(() => Promise.resolve({ data: {} })),
+    },
+    mockProductsApi: {
+      getAll: vi.fn(() => Promise.resolve({ data: [] })),
+      getById: vi.fn(() => Promise.resolve({ data: {} })),
+      create: vi.fn(() => Promise.resolve({ data: {} })),
+      update: vi.fn(() => Promise.resolve({ data: {} })),
+      delete: vi.fn(() => Promise.resolve({ data: {} })),
+    },
   };
 });
+
+// Mock axios BEFORE any component imports it
+vi.mock('axios', () => ({
+  default: mockAxios,
+  AxiosError: mockAxios.AxiosError,
+}));
+
+// Mock offlineQueue BEFORE any component imports it
+vi.mock('../services/offlineQueue', () => ({
+  offlineQueue: mockOfflineQueue,
+}));
+
+// Mock the entire api module to prevent real axios instance creation
+vi.mock('../services/api', () => ({
+  default: mockApi,
+  animalsApi: mockAnimalsApi,
+  eventsApi: mockEventsApi,
+  locationsApi: mockLocationsApi,
+  expensesApi: mockExpensesApi,
+  productsApi: mockProductsApi,
+}));
 
 // Cleanup after each test
 afterEach(() => {

@@ -19,9 +19,9 @@ describe('api-client', () => {
 
   describe('axiosInstance configuration', () => {
     it('should have request and response interceptors', () => {
-      expect(mockAxiosInstance._requestInterceptor).toBeDefined();
-      expect(mockAxiosInstance._responseSuccessInterceptor).toBeDefined();
-      expect(mockAxiosInstance._responseErrorInterceptor).toBeDefined();
+      expect((axiosInstance as any)._requestInterceptor).toBeDefined();
+      expect((axiosInstance as any)._responseSuccessInterceptor).toBeDefined();
+      expect((axiosInstance as any)._responseErrorInterceptor).toBeDefined();
     });
   });
 
