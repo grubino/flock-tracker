@@ -1,11 +1,25 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { AuthProvider, useAuth } from './AuthContext';
 import type { ReactNode } from 'react';
-import axios from 'axios';
 
-// axios is already mocked globally in setup.ts
-const mockAxios = axios as any;
+// Mock the api module BEFORE importing AuthContext to prevent actual HTTP calls
+vi.mock('../services/api', () => ({
+  default: {
+    post: vi.fn(() => Promise.resolve({ data: {} })),
+    get: vi.fn(() => Promise.resolve({ data: {} })),
+    put: vi.fn(() => Promise.resolve({ data: {} })),
+    delete: vi.fn(() => Promise.resolve({ data: {} })),
+    interceptors: {
+      request: { use: vi.fn(), eject: vi.fn() },
+      response: { use: vi.fn(), eject: vi.fn() },
+    },
+  },
+}));
+
+// Now import after the mock is set up
+import { AuthProvider, useAuth } from './AuthContext';
+import api from '../services/api';
+const mockApi = api as any;
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <AuthProvider>{children}</AuthProvider>
@@ -75,7 +89,7 @@ describe('AuthContext', () => {
         token: 'new-token',
       };
 
-      mockAxios.post.mockResolvedValueOnce({ data: mockResponse });
+      mockApi.post.mockResolvedValueOnce({ data: mockResponse });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -99,7 +113,7 @@ describe('AuthContext', () => {
     });
 
     it('should handle registration failure', async () => {
-      mockAxios.post.mockRejectedValueOnce(new Error('Registration failed'));
+      mockApi.post.mockRejectedValueOnce(new Error('Registration failed'));
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -127,7 +141,7 @@ describe('AuthContext', () => {
         token: 'test-token',
       };
 
-      mockAxios.post.mockResolvedValueOnce({ data: mockResponse });
+      mockApi.post.mockResolvedValueOnce({ data: mockResponse });
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
@@ -151,7 +165,7 @@ describe('AuthContext', () => {
     });
 
     it('should handle login failure', async () => {
-      mockAxios.post.mockRejectedValueOnce(new Error('Login failed'));
+      mockApi.post.mockRejectedValueOnce(new Error('Login failed'));
 
       const { result } = renderHook(() => useAuth(), { wrapper });
 
