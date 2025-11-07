@@ -9,5 +9,19 @@ from .vendors import router as vendors_router
 from .receipts import router as receipts_router
 from .products import router as products_router
 from .orders import router as orders_router
+from .care_schedules import router as care_schedules_router
 
-__all__ = ["animals_router", "events_router", "expenses_router", "locations_router", "photographs_router", "auth_router", "admin_router", "vendors_router", "receipts_router", "products_router", "orders_router"]
+__all__ = [
+    "animals_router",
+    "events_router",
+    "expenses_router",
+    "locations_router",
+    "photographs_router",
+    "auth_router",
+    "admin_router",
+    "vendors_router",
+    "receipts_router",
+    "products_router",
+    "orders_router",
+    "care_schedules_router"
+]

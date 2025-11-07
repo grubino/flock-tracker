@@ -11,7 +11,9 @@ import {
   TabList,
   Tab,
   Input,
-  Button
+  Button,
+  type SelectTabData,
+  type SelectTabEvent
 } from '@fluentui/react-components';
 import { Search20Regular, Dismiss20Regular } from '@fluentui/react-icons';
 import { animalsApi, productsApi } from '../../services/api';
@@ -100,11 +102,11 @@ const CustomerDashboard: React.FC = () => {
     enabled: mainTab === 'products',
   });
 
-  const handleTabSelect = (_event: any, data: any) => {
+  const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setSelectedTab(data.value as string);
   };
 
-  const handleMainTabSelect = (_event: any, data: any) => {
+  const handleMainTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setMainTab(data.value as string);
     setSelectedTab('all');
     setSearchQuery('');

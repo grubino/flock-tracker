@@ -105,8 +105,10 @@ const EventCSVImport: React.FC = () => {
       setImportResult(response.data);
       queryClient.invalidateQueries({ queryKey: ['events'] });
     },
-    onError: (error: any) => {
-      alert(`Upload failed: ${error.response?.data?.detail || error.message}`);
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      alert(`Upload failed: ${detail || errorMessage}`);
     },
   });
 

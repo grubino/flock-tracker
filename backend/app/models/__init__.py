@@ -9,5 +9,19 @@ from .user import User
 from .vendor import Vendor
 from .product import Product, ProductCategory
 from .order import Order, OrderItem, OrderStatus
+from .care_schedule import CareSchedule, CareCompletion, CareType, RecurrenceType, ScheduleStatus, TaskStatus
 
-__all__ = ["Animal", "AnimalType", "SheepGender", "Event", "EventType", "Expense", "ExpenseCategory", "ExpenseLineItem", "Location", "Photograph", "Receipt", "User", "Vendor", "Product", "ProductCategory", "Order", "OrderItem", "OrderStatus"]
+__all__ = [
+    "Animal", "AnimalType", "SheepGender",
+    "Event", "EventType",
+    "Expense", "ExpenseCategory",
+    "ExpenseLineItem",
+    "Location",
+    "Photograph",
+    "Receipt",
+    "User",
+    "Vendor",
+    "Product", "ProductCategory",
+    "Order", "OrderItem", "OrderStatus",
+    "CareSchedule", "CareCompletion", "CareType", "RecurrenceType", "ScheduleStatus", "TaskStatus"
+]

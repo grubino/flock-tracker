@@ -149,7 +149,7 @@ export const Login: React.FC = () => {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: { credential: string }) => {
     try {
       // TODO: Send the credential to your backend for verification
       // and user creation/login

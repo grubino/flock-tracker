@@ -7,6 +7,7 @@ from app.database.database import Base
 
 class ProductCategory(str, enum.Enum):
     PET_FOOD = "pet_food"
+    MEAT = "meat"
     EGGS = "eggs"
     WOOL = "wool"
     HONEY = "honey"
