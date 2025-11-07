@@ -14,6 +14,7 @@ describe.skip('api-client', () => {
   });
 
   afterEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (window as any).location;
   });
 
@@ -29,11 +30,13 @@ describe.skip('api-client', () => {
     it('should add Authorization header when token exists', async () => {
       localStorage.setItem('auth_token', 'test-token');
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockConfig: any = {
         headers: {},
       };
 
       // Access the request interceptor
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const requestInterceptor = (axiosInstance as any)._requestInterceptor;
       const result = await requestInterceptor(mockConfig);
 
@@ -41,10 +44,12 @@ describe.skip('api-client', () => {
     });
 
     it('should not add Authorization header when token does not exist', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockConfig: any = {
         headers: {},
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const requestInterceptor = (axiosInstance as any)._requestInterceptor;
       const result = await requestInterceptor(mockConfig);
 
@@ -55,13 +60,16 @@ describe.skip('api-client', () => {
   describe('response interceptor', () => {
     beforeEach(() => {
       // Mock window.location
-      delete (window as any).location;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (window as any).location;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).location = { pathname: '/animals', href: '' };
     });
 
     it('should pass through successful responses', async () => {
       const mockResponse = { data: { success: true } };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const responseInterceptor = (axiosInstance as any)._responseSuccessInterceptor;
       const result = await responseInterceptor(mockResponse);
 
@@ -78,12 +86,14 @@ describe.skip('api-client', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorInterceptor = (axiosInstance as any)._responseErrorInterceptor;
 
       await expect(errorInterceptor(mockError)).rejects.toEqual(mockError);
 
       expect(localStorage.getItem('auth_token')).toBeNull();
       expect(localStorage.getItem('user_data')).toBeNull();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).location.href).toBe('/login');
     });
 
@@ -97,16 +107,19 @@ describe.skip('api-client', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorInterceptor = (axiosInstance as any)._responseErrorInterceptor;
 
       await expect(errorInterceptor(mockError)).rejects.toEqual(mockError);
 
       expect(localStorage.getItem('auth_token')).toBeNull();
       expect(localStorage.getItem('user_data')).toBeNull();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).location.href).toBe('/login');
     });
 
     it('should not redirect if already on login page', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window as any).location.pathname = '/login';
 
       const mockError = {
@@ -115,10 +128,12 @@ describe.skip('api-client', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorInterceptor = (axiosInstance as any)._responseErrorInterceptor;
 
       await expect(errorInterceptor(mockError)).rejects.toEqual(mockError);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).location.href).toBe('');
     });
 
@@ -129,10 +144,12 @@ describe.skip('api-client', () => {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorInterceptor = (axiosInstance as any)._responseErrorInterceptor;
 
       await expect(errorInterceptor(mockError)).rejects.toEqual(mockError);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).location.href).toBe('');
     });
 
@@ -141,10 +158,12 @@ describe.skip('api-client', () => {
         message: 'Network Error',
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const errorInterceptor = (axiosInstance as any)._responseErrorInterceptor;
 
       await expect(errorInterceptor(mockError)).rejects.toEqual(mockError);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((window as any).location.href).toBe('');
     });
   });

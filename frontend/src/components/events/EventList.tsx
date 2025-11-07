@@ -148,7 +148,7 @@ const EventList: React.FC = () => {
 
   // Build filter params
   const filterParams = useMemo(() => {
-    const params: any = {};
+    const params: { event_type?: string; start_date?: string; end_date?: string; animal_id?: number } = {};
     if (selectedEventType) params.event_type = selectedEventType;
     if (startDate) params.start_date = startDate;
     if (endDate) params.end_date = endDate;

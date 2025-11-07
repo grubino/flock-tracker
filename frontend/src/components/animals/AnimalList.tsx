@@ -15,7 +15,9 @@ import {
   Label,
   Dropdown,
   Option,
-  Checkbox
+  Checkbox,
+  type SelectTabData,
+  type SelectTabEvent
 } from '@fluentui/react-components';
 import { Dismiss24Regular } from '@fluentui/react-icons';
 import { animalsApi, locationsApi, eventsApi } from '../../services/api';
@@ -174,7 +176,7 @@ const AnimalList: React.FC = () => {
     queryFn: () => eventsApi.getAll().then(res => res.data),
   });
 
-  const handleTabSelect = (_event: any, data: any) => {
+  const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setSelectedTab(data.value as string);
   };
 

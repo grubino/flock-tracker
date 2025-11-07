@@ -10,6 +10,7 @@ import {
 } from '@fluentui/react-components';
 import { ArrowUpload24Regular, AnimalRabbit24Regular, Checkmark24Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { animalsApi } from '../../services/api';
+import type { Animal } from '../../generated/models';
 
 const useStyles = makeStyles({
   container: {
@@ -97,7 +98,7 @@ interface ImportResult {
   error_count: number;
   total_rows: number;
   errors: string[];
-  created_animals: any[];
+  created_animals: Animal[];
 }
 
 const AnimalCSVImport: React.FC = () => {
@@ -113,8 +114,10 @@ const AnimalCSVImport: React.FC = () => {
       setImportResult(response.data);
       queryClient.invalidateQueries({ queryKey: ['animals'] });
     },
-    onError: (error: any) => {
-      alert(`Upload failed: ${error.response?.data?.detail || error.message}`);
+    onError: (error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      alert(`Upload failed: ${detail || errorMessage}`);
     },
   });
 

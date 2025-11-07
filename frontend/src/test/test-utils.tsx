@@ -31,6 +31,7 @@ interface AllTheProvidersProps {
   children: React.ReactNode;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 const AllTheProviders: React.FC<AllTheProvidersProps> = ({ children }) => {
   const queryClient = createTestQueryClient();
 
@@ -52,5 +53,6 @@ const customRender = (
   options?: Omit<RenderOptions, 'wrapper'>
 ) => render(ui, { wrapper: AllTheProviders, ...options });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react';
 export { customRender as render };

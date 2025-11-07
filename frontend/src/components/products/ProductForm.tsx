@@ -167,7 +167,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, isEdit = false }) =>
                 id="category"
                 value={formData.category.replace('_', ' ')}
                 selectedOptions={[formData.category]}
-                onOptionSelect={(_, data) => setFormData(prev => ({ ...prev, category: data.optionValue as any }))}
+                onOptionSelect={(_, data) => setFormData(prev => ({ ...prev, category: data.optionValue as string }))}
               >
                 <Option value={ProductCategory.PET_FOOD}>Pet Food</Option>
                 <Option value={ProductCategory.EGGS}>Eggs</Option>

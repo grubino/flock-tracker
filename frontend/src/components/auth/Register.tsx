@@ -197,14 +197,14 @@ export const Register: React.FC = () => {
       await register(formData.email, formData.password, formData.name);
       setSuccess('Account created successfully! Redirecting...');
       setTimeout(() => navigate('/'), 2000);
-    } catch (err) {
+    } catch {
       setError('Registration failed. Please try again.');
     } finally {
       setLocalLoading(false);
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: { credential: string }) => {
     try {
       // TODO: Send the credential to your backend for verification
       // and user creation/login

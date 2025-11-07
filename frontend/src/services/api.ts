@@ -2,6 +2,11 @@ import axios, { AxiosError } from 'axios';
 import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest } from '../types';
 import { offlineQueue } from './offlineQueue';
 
+interface QueuedError extends Error {
+  isQueued: boolean;
+  originalError: unknown;
+}
+
 // Get server URL from localStorage or fall back to environment variable
 const getServerUrl = (): string => {
   const storedUrl = localStorage.getItem('server_url');
@@ -85,9 +90,9 @@ api.interceptors.response.use(
         });
 
         // Create a custom error to indicate the request was queued
-        const queuedError = new Error('Request queued for offline sync');
-        (queuedError as any).isQueued = true;
-        (queuedError as any).originalError = error;
+        const queuedError = new Error('Request queued for offline sync') as QueuedError;
+        queuedError.isQueued = true;
+        queuedError.originalError = error;
         return Promise.reject(queuedError);
       }
     }
