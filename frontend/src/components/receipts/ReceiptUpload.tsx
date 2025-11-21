@@ -123,7 +123,7 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
           alert(`OCR processing failed: ${statusResponse.data.error || 'Unknown error'}`);
         }
         // Continue polling if status is 'pending' or 'processing'
-      } catch (error) {
+      } catch {
         clearInterval(pollInterval);
         alert('Error checking OCR status');
       }

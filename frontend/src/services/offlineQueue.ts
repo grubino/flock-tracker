@@ -14,7 +14,7 @@ export interface QueuedRequest {
   id: string;
   url: string;
   method: string;
-  data?: any;
+  data?: unknown;
   headers?: Record<string, string>;
   timestamp: number;
   retryCount: number;

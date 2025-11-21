@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { syncService } from '../services/syncService';
 import type { SyncStatus } from '../services/syncService';
@@ -44,15 +44,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Automatically sync when coming back online
-  useEffect(() => {
-    if (wasOffline && isOnline) {
-      console.log('[OfflineContext] Connection restored, triggering sync');
-      triggerSync();
-    }
-  }, [wasOffline, isOnline]);
-
-  const triggerSync = async () => {
+  const triggerSync = useCallback(async () => {
     if (!isOnline) {
       console.log('[OfflineContext] Cannot sync while offline');
       return;
@@ -65,7 +57,15 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
     console.log('[OfflineContext] Starting manual sync');
     await syncService.syncQueue();
-  };
+  }, [isOnline, syncStatus.isSyncing]);
+
+  // Automatically sync when coming back online
+  useEffect(() => {
+    if (wasOffline && isOnline) {
+      console.log('[OfflineContext] Connection restored, triggering sync');
+      triggerSync();
+    }
+  }, [wasOffline, isOnline, triggerSync]);
 
   return (
     <OfflineContext.Provider
@@ -81,6 +81,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOffline() {
   const context = useContext(OfflineContext);
   if (!context) {

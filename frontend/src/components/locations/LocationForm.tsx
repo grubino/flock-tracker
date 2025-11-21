@@ -125,7 +125,7 @@ const LocationForm: React.FC<LocationFormProps> = ({ location, isEdit = false })
               id="name"
               name="name"
               value={formData.name}
-              onChange={(_, data) => handleChange({ target: { name: 'name', value: data.value } } as any)}
+              onChange={(_, data) => handleChange({ target: { name: 'name', value: data.value } } as React.ChangeEvent<HTMLInputElement>)}
               required
               placeholder="e.g., North Pasture, Barn A, etc."
             />
@@ -137,7 +137,7 @@ const LocationForm: React.FC<LocationFormProps> = ({ location, isEdit = false })
               id="paddock_name"
               name="paddock_name"
               value={formData.paddock_name}
-              onChange={(_, data) => handleChange({ target: { name: 'paddock_name', value: data.value } } as any)}
+              onChange={(_, data) => handleChange({ target: { name: 'paddock_name', value: data.value } } as React.ChangeEvent<HTMLInputElement>)}
               placeholder="e.g., Paddock 1, West Field, etc."
             />
           </div>
@@ -148,7 +148,7 @@ const LocationForm: React.FC<LocationFormProps> = ({ location, isEdit = false })
               id="address"
               name="address"
               value={formData.address}
-              onChange={(_, data) => handleChange({ target: { name: 'address', value: data.value } } as any)}
+              onChange={(_, data) => handleChange({ target: { name: 'address', value: data.value } } as React.ChangeEvent<HTMLInputElement>)}
               placeholder="Full address or coordinates"
             />
           </div>
@@ -159,7 +159,7 @@ const LocationForm: React.FC<LocationFormProps> = ({ location, isEdit = false })
               id="description"
               name="description"
               value={formData.description}
-              onChange={(_, data) => handleChange({ target: { name: 'description', value: data.value } } as any)}
+              onChange={(_, data) => handleChange({ target: { name: 'description', value: data.value } } as React.ChangeEvent<HTMLTextAreaElement>)}
               rows={4}
               placeholder="Additional details about this location..."
             />
