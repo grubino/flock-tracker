@@ -1,12 +1,13 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import type { AxiosRequestConfig } from 'axios';
+import { afterEach, vi, type Mock } from 'vitest';
 
 // Create hoisted mocks to ensure they're applied before any imports
 const { mockOfflineQueue, mockAxios, mockApi, mockAnimalsApi, mockEventsApi, mockLocationsApi, mockExpensesApi, mockProductsApi } = vi.hoisted(() => {
   // Create mock axios instance
   const createMockAxiosInstance = () => {
-    const instance: any = vi.fn(() => Promise.resolve({ data: {} }));
+    const instance: Mock<() => AxiosRequestConfig> = vi.fn(() => Promise.resolve({ data: {} } as AxiosRequestConfig));
 
     // Add HTTP methods
     instance.get = vi.fn(() => Promise.resolve({ data: {} }));
