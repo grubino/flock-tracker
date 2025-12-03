@@ -10,6 +10,7 @@ import {
 import {
   AnimalRabbit20Regular,
   Calendar20Regular,
+  CalendarClock20Regular,
   Location20Regular,
   Home20Regular,
   Dismiss20Regular,
@@ -176,6 +177,11 @@ const SideNavigation: React.FC<SideNavigationProps> = ({ isOpen, onClose }) => {
       path: '/events',
       label: 'Events',
       icon: <Calendar20Regular />,
+    },
+    {
+      path: '/care-schedules',
+      label: 'Care Schedules',
+      icon: <CalendarClock20Regular />,
     },
     {
       path: '/expenses',

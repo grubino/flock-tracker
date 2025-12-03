@@ -285,12 +285,20 @@ const EventList: React.FC = () => {
               onOptionSelect={(_, data) => setSelectedEventType(data.optionValue || '')}
             >
               <Option value="">All event types</Option>
-              <Option value={EventType.DEWORMING}>Deworming</Option>
-              <Option value={EventType.DELICING}>Delicing</Option>
-              <Option value={EventType.MITE_TREATMENT}>Mite Treatment</Option>
-              <Option value={EventType.LAMBING}>Lambing</Option>
-              <Option value={EventType.HEALTH_CHECK}>Health Check</Option>
+              <Option value={EventType.BIRTH}>Birth</Option>
+              <Option value={EventType.BREEDING}>Breeding</Option>
+              <Option value={EventType.BRED}>Bred</Option>
               <Option value={EventType.DEATH}>Death</Option>
+              <Option value={EventType.DELICING}>Delicing</Option>
+              <Option value={EventType.DEWORMING}>Deworming</Option>
+              <Option value={EventType.HEALTH_CHECK}>Health Check</Option>
+              <Option value={EventType.INJURY}>Injury</Option>
+              <Option value={EventType.LAMBING}>Lambing</Option>
+              <Option value={EventType.MEDICATION}>Medication</Option>
+              <Option value={EventType.MITE_TREATMENT}>Mite Treatment</Option>
+              <Option value={EventType.SLAUGHTER}>Slaughter</Option>
+              <Option value={EventType.SOLD}>Sold</Option>
+              <Option value={EventType.TREATMENT}>Treatment</Option>
               <Option value={EventType.OTHER}>Other</Option>
             </Dropdown>
           </div>

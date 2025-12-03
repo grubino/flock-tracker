@@ -17,6 +17,9 @@ class EventType(enum.Enum):
     DEATH = "death"
     INJURY = "injury"
     TREATMENT = "treatment"
+    SLAUGHTER = "slaughter"
+    SOLD = "sold"
+    BRED = "bred"
     OTHER = "other"
 
 
