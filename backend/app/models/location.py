@@ -30,6 +30,7 @@ class Location(Base):
 
     # Relationships
     animals = relationship("Animal", foreign_keys="Animal.current_location_id", back_populates="current_location")
+    care_schedules = relationship("CareSchedule", back_populates="location", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Location(id={self.id}, name='{self.name}', paddock='{self.paddock_name}')>"

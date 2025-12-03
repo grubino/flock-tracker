@@ -27,6 +27,9 @@ import LocationForm from './components/locations/LocationForm';
 import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
 import ProfileView from './components/profile/ProfileView';
+import CareScheduleList from './components/care-schedules/CareScheduleList';
+import CareScheduleForm from './components/care-schedules/CareScheduleForm';
+import CareScheduleCalendar from './components/care-schedules/CareScheduleCalendar';
 import UserManagement from './components/admin/UserManagement';
 import CustomerDashboard from './components/customer/CustomerDashboard';
 import { RoleGuard } from './components/auth/RoleGuard';
@@ -257,6 +260,51 @@ function App() {
                       <RoleGuard minRole="user">
                         <Layout>
                           <ProductForm isEdit />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/care-schedules" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <CareScheduleList />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/care-schedules/new" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <CareScheduleForm />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/care-schedules/calendar" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <CareScheduleCalendar />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/care-schedules/:id" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <CareScheduleList />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/care-schedules/:id/edit" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <CareScheduleForm isEdit />
                         </Layout>
                       </RoleGuard>
                     </ProtectedRoute>

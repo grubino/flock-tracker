@@ -197,7 +197,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
                 id="tag_number"
                 name="tag_number"
                 value={formData.tag_number}
-                onChange={(_, data) => handleChange({ target: { name: 'tag_number', value: data.value } } as any)}
+                onChange={(_, data) => handleChange({ target: { name: 'tag_number', value: data.value } } as React.ChangeEvent<HTMLInputElement>)}
                 required
               />
             </div>
@@ -208,7 +208,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
                 value={formData.animal_type}
                 selectedOptions={[formData.animal_type]}
                 onOptionSelect={(_, data) =>
-                  handleChange({ target: { name: 'animal_type', value: data.optionValue } } as any)
+                  handleChange({ target: { name: 'animal_type', value: data.optionValue } } as React.ChangeEvent<HTMLInputElement>)
                 }
               >
                 <Option value={AnimalType.SHEEP}>Sheep</Option>
@@ -258,7 +258,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
                 id="birth_date"
                 name="birth_date"
                 value={formData.birth_date}
-                onChange={(_, data) => handleChange({ target: { name: 'birth_date', value: data.value } } as any)}
+                onChange={(_, data) => handleChange({ target: { name: 'birth_date', value: data.value } } as React.ChangeEvent<HTMLInputElement>)}
               />
             </div>
           </div>
@@ -274,7 +274,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
                 value={formData.current_location_id?.toString() || ''}
                 selectedOptions={formData.current_location_id ? [formData.current_location_id.toString()] : []}
                 onOptionSelect={(_, data) =>
-                  handleChange({ target: { name: 'current_location_id', value: data.optionValue } } as any)
+                  handleChange({ target: { name: 'current_location_id', value: data.optionValue } } as React.ChangeEvent<HTMLInputElement>)
                 }
                 placeholder="Select Location"
               >
@@ -297,7 +297,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
                 value={formData.sire_id?.toString() || ''}
                 selectedOptions={formData.sire_id ? [formData.sire_id.toString()] : []}
                 onOptionSelect={(_, data) =>
-                  handleChange({ target: { name: 'sire_id', value: data.optionValue } } as any)
+                  handleChange({ target: { name: 'sire_id', value: data.optionValue } } as React.ChangeEvent<HTMLInputElement>)
                 }
                 placeholder="Select Sire"
               >
@@ -316,7 +316,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
                 value={formData.dam_id?.toString() || ''}
                 selectedOptions={formData.dam_id ? [formData.dam_id.toString()] : []}
                 onOptionSelect={(_, data) =>
-                  handleChange({ target: { name: 'dam_id', value: data.optionValue } } as any)
+                  handleChange({ target: { name: 'dam_id', value: data.optionValue } } as React.ChangeEvent<HTMLInputElement>)
                 }
                 placeholder="Select Dam"
               >

@@ -17,6 +17,9 @@ class EventType(enum.Enum):
     DEATH = "death"
     INJURY = "injury"
     TREATMENT = "treatment"
+    SLAUGHTER = "slaughter"
+    SOLD = "sold"
+    BRED = "bred"
     OTHER = "other"
 
 
@@ -42,6 +45,7 @@ class Event(Base):
 
     # Relationships
     animal = relationship("Animal", back_populates="events")
+    care_completion = relationship("CareCompletion", back_populates="event", uselist=False)
 
     def __repr__(self):
         return f"<Event(id={self.id}, animal_id={self.animal_id}, type='{self.event_type.value}', date='{self.event_date}')>"

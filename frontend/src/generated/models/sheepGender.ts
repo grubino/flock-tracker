@@ -24,7 +24,7 @@
 export type SheepGender = typeof SheepGender[keyof typeof SheepGender];
 
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
+ 
 export const SheepGender = {
   ewe: 'ewe',
   ram: 'ram',

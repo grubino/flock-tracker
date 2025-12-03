@@ -1,6 +1,11 @@
 import axios, { AxiosError } from 'axios';
-import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest } from '../types';
+import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary } from '../types';
 import { offlineQueue } from './offlineQueue';
+
+interface QueuedError extends Error {
+  isQueued: boolean;
+  originalError: unknown;
+}
 
 // Get server URL from localStorage or fall back to environment variable
 const getServerUrl = (): string => {
@@ -85,9 +90,9 @@ api.interceptors.response.use(
         });
 
         // Create a custom error to indicate the request was queued
-        const queuedError = new Error('Request queued for offline sync');
-        (queuedError as any).isQueued = true;
-        (queuedError as any).originalError = error;
+        const queuedError = new Error('Request queued for offline sync') as QueuedError;
+        queuedError.isQueued = true;
+        queuedError.originalError = error;
         return Promise.reject(queuedError);
       }
     }
@@ -232,6 +237,44 @@ export const productsApi = {
   create: (product: ProductCreateRequest) => api.post<Product>('/api/products', product),
   update: (id: number, product: Partial<ProductCreateRequest>) => api.put<Product>(`/api/products/${id}`, product),
   delete: (id: number) => api.delete(`/api/products/${id}`),
+};
+
+export const careSchedulesApi = {
+  getAll: (params?: {
+    skip?: number;
+    limit?: number;
+    animal_id?: number;
+    location_id?: number;
+    care_type?: string;
+    status?: string;
+    assigned_to_id?: number;
+  }) => api.get<CareSchedule[]>('/api/care-schedules', { params }),
+  getById: (id: number) => api.get<CareSchedule>(`/api/care-schedules/${id}`),
+  getUpcoming: (params?: {
+    days?: number;
+    assigned_to_id?: number;
+  }) => api.get<UpcomingTask[]>('/api/care-schedules/upcoming', { params }),
+  getOverdue: (params?: {
+    assigned_to_id?: number;
+  }) => api.get<CareSchedule[]>('/api/care-schedules/overdue', { params }),
+  getSummary: (params?: {
+    assigned_to_id?: number;
+  }) => api.get<TaskSummary>('/api/care-schedules/summary', { params }),
+  create: (schedule: CareScheduleCreateRequest) => api.post<CareSchedule>('/api/care-schedules', schedule),
+  update: (id: number, schedule: Partial<CareScheduleCreateRequest>) => api.put<CareSchedule>(`/api/care-schedules/${id}`, schedule),
+  delete: (id: number) => api.delete(`/api/care-schedules/${id}`),
+};
+
+export const careCompletionsApi = {
+  getAll: (params?: {
+    schedule_id?: number;
+    skip?: number;
+    limit?: number;
+  }) => api.get<CareCompletion[]>('/api/care-schedules/completions', { params }),
+  getById: (id: number) => api.get<CareCompletion>(`/api/care-schedules/completions/${id}`),
+  create: (completion: CareCompletionCreateRequest) => api.post<CareCompletion>('/api/care-schedules/completions', completion),
+  update: (id: number, completion: Partial<CareCompletionCreateRequest>) => api.put<CareCompletion>(`/api/care-schedules/completions/${id}`, completion),
+  delete: (id: number) => api.delete(`/api/care-schedules/completions/${id}`),
 };
 
 export default api;

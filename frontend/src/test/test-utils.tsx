@@ -5,16 +5,25 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
 import { AuthProvider } from '../contexts/AuthContext';
 
-// Create a test query client
+// Create a test query client with network call prevention
 const createTestQueryClient = () =>
   new QueryClient({
     defaultOptions: {
       queries: {
         retry: false,
+        staleTime: Infinity,
+        gcTime: Infinity,
+        networkMode: 'offlineFirst', // Prefer cache over network in tests
       },
       mutations: {
         retry: false,
+        networkMode: 'offlineFirst',
       },
+    },
+    logger: {
+      log: () => {},
+      warn: () => {},
+      error: () => {}, // Suppress query errors in tests
     },
   });
 
@@ -22,6 +31,7 @@ interface AllTheProvidersProps {
   children: React.ReactNode;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 const AllTheProviders: React.FC<AllTheProvidersProps> = ({ children }) => {
   const queryClient = createTestQueryClient();
 
@@ -43,5 +53,6 @@ const customRender = (
   options?: Omit<RenderOptions, 'wrapper'>
 ) => render(ui, { wrapper: AllTheProviders, ...options });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export * from '@testing-library/react';
 export { customRender as render };
