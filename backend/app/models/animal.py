@@ -44,7 +44,7 @@ class Animal(Base):
     current_location = relationship("Location", foreign_keys=[current_location_id])
     events = relationship("Event", back_populates="animal", cascade="all, delete-orphan")
     photographs = relationship("Photograph", back_populates="animal", cascade="all, delete-orphan")
-    care_schedules = relationship("CareSchedule", back_populates="animal", cascade="all, delete-orphan")
+    care_schedules = relationship("CareSchedule", secondary="care_schedule_animals", back_populates="animals")
 
     def __repr__(self):
         return f"<Animal(id={self.id}, tag_number='{self.tag_number}', type='{self.animal_type.value}', name='{self.name}')>"

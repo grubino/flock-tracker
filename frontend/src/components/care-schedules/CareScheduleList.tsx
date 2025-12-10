@@ -11,12 +11,11 @@ import {
   Card,
   Dropdown,
   Option,
-  Input,
   Label
 } from '@fluentui/react-components';
 import { Dismiss24Regular, CalendarLtr24Regular } from '@fluentui/react-icons';
 import { careSchedulesApi, animalsApi, locationsApi } from '../../services/api';
-import { CareType, ScheduleStatus, RecurrenceType } from '../../types';
+import { CareType, ScheduleStatus } from '../../types';
 import type { CareSchedule } from '../../types';
 
 const useStyles = makeStyles({
@@ -192,9 +191,13 @@ const CareScheduleList: React.FC = () => {
 
   const hasActiveFilters = selectedCareType || selectedStatus || selectedAnimalId || selectedLocationId;
 
-  const getAnimalName = (animalId: number) => {
-    const animal = animals?.find(a => a.id === animalId);
-    return animal ? (animal.name || animal.tag_number) : `Animal #${animalId}`;
+  const getAnimalNames = (animalIds: number[]) => {
+    if (!animalIds || animalIds.length === 0) return null;
+    const names = animalIds.map(id => {
+      const animal = animals?.find(a => a.id === id);
+      return animal ? (animal.name || animal.tag_number) : `Animal #${id}`;
+    });
+    return names.join(', ');
   };
 
   const getLocationName = (locationId: number) => {
@@ -428,9 +431,9 @@ const CareScheduleList: React.FC = () => {
                   <Text size={300} style={{ color: tokens.colorNeutralForeground2 }}>
                     Next due: {new Date(schedule.next_due_date).toLocaleDateString()} at {new Date(schedule.next_due_date).toLocaleTimeString()}
                   </Text>
-                  {schedule.animal_id && (
+                  {schedule.animal_ids && schedule.animal_ids.length > 0 && (
                     <Text size={300}>
-                      Animal: {getAnimalName(schedule.animal_id)}
+                      Animals: {getAnimalNames(schedule.animal_ids)}
                     </Text>
                   )}
                   {schedule.location_id && (

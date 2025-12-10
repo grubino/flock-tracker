@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -84,37 +84,41 @@ const CareScheduleForm: React.FC<CareScheduleFormProps> = ({ isEdit = false }) =
   const [reminderHoursBefore, setReminderHoursBefore] = useState('0');
   const [status, setStatus] = useState<string>(ScheduleStatus.ACTIVE);
   const [priority, setPriority] = useState('MEDIUM');
-  const [animalId, setAnimalId] = useState<string>('');
+  const [animalIds, setAnimalIds] = useState<string[]>([]);
   const [locationId, setLocationId] = useState<string>('');
   const [notes, setNotes] = useState('');
   const [estimatedDuration, setEstimatedDuration] = useState('');
 
   // Load existing schedule if editing
-  useQuery({
+  const { data: existingSchedule } = useQuery({
     queryKey: ['care-schedule', id],
     queryFn: () => careSchedulesApi.getById(parseInt(id!)).then(res => res.data),
     enabled: isEdit && !!id,
-    onSuccess: (data) => {
-      setTitle(data.title);
-      setDescription(data.description || '');
-      setCareType(data.care_type);
-      setRecurrenceType(data.recurrence_type);
-      setStartDate(data.start_date.split('T')[0]);
-      const time = new Date(data.start_date).toTimeString().slice(0, 5);
-      setStartTime(time);
-      setEndDate(data.end_date ? data.end_date.split('T')[0] : '');
-      setRecurrenceInterval(data.recurrence_interval.toString());
-      setReminderEnabled(data.reminder_enabled);
-      setReminderDaysBefore(data.reminder_days_before.toString());
-      setReminderHoursBefore(data.reminder_hours_before.toString());
-      setStatus(data.status);
-      setPriority(data.priority);
-      setAnimalId(data.animal_id?.toString() || '');
-      setLocationId(data.location_id?.toString() || '');
-      setNotes(data.notes || '');
-      setEstimatedDuration(data.estimated_duration_minutes?.toString() || '');
-    },
   });
+
+  // Effect to populate form when data is loaded
+  useEffect(() => {
+    if (existingSchedule) {
+      setTitle(existingSchedule.title);
+      setDescription(existingSchedule.description || '');
+      setCareType(existingSchedule.care_type);
+      setRecurrenceType(existingSchedule.recurrence_type);
+      setStartDate(existingSchedule.start_date.split('T')[0]);
+      const time = new Date(existingSchedule.start_date).toTimeString().slice(0, 5);
+      setStartTime(time);
+      setEndDate(existingSchedule.end_date ? existingSchedule.end_date.split('T')[0] : '');
+      setRecurrenceInterval(existingSchedule.recurrence_interval.toString());
+      setReminderEnabled(existingSchedule.reminder_enabled);
+      setReminderDaysBefore(existingSchedule.reminder_days_before.toString());
+      setReminderHoursBefore(existingSchedule.reminder_hours_before.toString());
+      setStatus(existingSchedule.status);
+      setPriority(existingSchedule.priority);
+      setAnimalIds(existingSchedule.animal_ids?.map((id: number) => id.toString()) || []);
+      setLocationId(existingSchedule.location_id?.toString() || '');
+      setNotes(existingSchedule.notes || '');
+      setEstimatedDuration(existingSchedule.estimated_duration_minutes?.toString() || '');
+    }
+  }, [existingSchedule]);
 
   const { data: animals } = useQuery({
     queryKey: ['animals'],
@@ -165,7 +169,7 @@ const CareScheduleForm: React.FC<CareScheduleFormProps> = ({ isEdit = false }) =
       reminder_hours_before: parseInt(reminderHoursBefore),
       status: status as ScheduleStatus,
       priority,
-      animal_id: animalId ? parseInt(animalId) : undefined,
+      animal_ids: animalIds.map(id => parseInt(id)),
       location_id: locationId ? parseInt(locationId) : undefined,
       notes: notes || undefined,
       estimated_duration_minutes: estimatedDuration ? parseInt(estimatedDuration) : undefined,
@@ -346,14 +350,15 @@ const CareScheduleForm: React.FC<CareScheduleFormProps> = ({ isEdit = false }) =
 
             <div className={styles.formGrid}>
               <div className={styles.field}>
-                <Label htmlFor="animal_id">Animal (Optional)</Label>
+                <Label htmlFor="animal_ids">Animals (Optional)</Label>
                 <Dropdown
-                  placeholder="Select animal..."
-                  value={animalId}
-                  selectedOptions={animalId ? [animalId] : []}
-                  onOptionSelect={(_, data) => setAnimalId(data.optionValue || '')}
+                  placeholder="Select animals..."
+                  multiselect
+                  selectedOptions={animalIds}
+                  onOptionSelect={(_, data) => {
+                    setAnimalIds(data.selectedOptions as string[]);
+                  }}
                 >
-                  <Option value="">None</Option>
                   {animals?.map(animal => (
                     <Option
                       key={animal.id}
@@ -364,6 +369,9 @@ const CareScheduleForm: React.FC<CareScheduleFormProps> = ({ isEdit = false }) =
                     </Option>
                   ))}
                 </Dropdown>
+                <Text className={styles.infoText}>
+                  {animalIds.length > 0 ? `${animalIds.length} animal(s) selected` : 'No animals selected'}
+                </Text>
               </div>
 
               <div className={styles.field}>
@@ -385,6 +393,19 @@ const CareScheduleForm: React.FC<CareScheduleFormProps> = ({ isEdit = false }) =
                     </Option>
                   ))}
                 </Dropdown>
+                {locationId && (
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    onClick={() => {
+                      const locationAnimals = animals?.filter(a => a.current_location_id === parseInt(locationId)) || [];
+                      setAnimalIds(locationAnimals.map(a => a.id.toString()));
+                    }}
+                    style={{ marginTop: tokens.spacingVerticalXS }}
+                  >
+                    Select all animals at this location
+                  </Button>
+                )}
               </div>
             </div>
           </div>

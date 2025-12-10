@@ -204,8 +204,13 @@ export const Register: React.FC = () => {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: { credential: string }) => {
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     try {
+      if (!credentialResponse.credential) {
+        setError('Google registration failed - no credential received');
+        return;
+      }
+
       // TODO: Send the credential to your backend for verification
       // and user creation/login
       console.log('Google registration success:', credentialResponse);

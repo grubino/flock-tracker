@@ -1,9 +1,18 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum as SQLEnum, Table
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
 
 from app.database.database import Base
+
+
+# Association table for many-to-many relationship between care schedules and animals
+care_schedule_animals = Table(
+    'care_schedule_animals',
+    Base.metadata,
+    Column('care_schedule_id', Integer, ForeignKey('care_schedules.id', ondelete='CASCADE'), primary_key=True),
+    Column('animal_id', Integer, ForeignKey('animals.id', ondelete='CASCADE'), primary_key=True)
+)
 
 
 class CareType(str, enum.Enum):
@@ -83,8 +92,7 @@ class CareSchedule(Base):
     status = Column(SQLEnum(ScheduleStatus), nullable=False, default=ScheduleStatus.ACTIVE, index=True)
     priority = Column(String(20), default="MEDIUM")  # LOW, MEDIUM, HIGH, URGENT
 
-    # Relationships
-    animal_id = Column(Integer, ForeignKey("animals.id", ondelete="CASCADE"), nullable=True, index=True)
+    # Relationships (foreign keys)
     location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True, index=True)
     assigned_to_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     created_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
@@ -98,7 +106,7 @@ class CareSchedule(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    animal = relationship("Animal", back_populates="care_schedules", foreign_keys=[animal_id])
+    animals = relationship("Animal", secondary=care_schedule_animals, back_populates="care_schedules")
     location = relationship("Location", back_populates="care_schedules", foreign_keys=[location_id])
     assigned_to = relationship("User", foreign_keys=[assigned_to_id])
     created_by = relationship("User", foreign_keys=[created_by_id])

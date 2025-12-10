@@ -36,7 +36,7 @@ class CareScheduleBase(BaseModel):
     priority: str = Field("MEDIUM", description="Priority level: LOW, MEDIUM, HIGH, URGENT")
 
     # Relationships
-    animal_id: Optional[int] = Field(None, description="ID of the animal this schedule is for")
+    animal_ids: List[int] = Field(default_factory=list, description="IDs of the animals this schedule is for")
     location_id: Optional[int] = Field(None, description="ID of the location this schedule is for")
     assigned_to_id: Optional[int] = Field(None, description="ID of the user assigned to this task")
 
@@ -67,7 +67,7 @@ class CareScheduleCreate(BaseModel):
     priority: str = Field("MEDIUM", description="Priority level")
 
     # Relationships
-    animal_id: Optional[int] = Field(None, description="ID of the animal")
+    animal_ids: List[int] = Field(default_factory=list, description="IDs of the animals")
     location_id: Optional[int] = Field(None, description="ID of the location")
     assigned_to_id: Optional[int] = Field(None, description="ID of the user assigned")
 
@@ -99,7 +99,7 @@ class CareScheduleUpdate(BaseModel):
     priority: Optional[str] = None
 
     # Relationships
-    animal_id: Optional[int] = None
+    animal_ids: Optional[List[int]] = None
     location_id: Optional[int] = None
     assigned_to_id: Optional[int] = None
 
@@ -201,7 +201,7 @@ class UpcomingTask(BaseModel):
     care_type: CareType
     due_date: datetime
     priority: str
-    animal_id: Optional[int]
+    animal_ids: List[int] = Field(default_factory=list, description="IDs of animals for this task")
     location_id: Optional[int]
     assigned_to_id: Optional[int]
     status: str

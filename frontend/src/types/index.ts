@@ -344,7 +344,7 @@ export interface CareSchedule {
   reminder_hours_before: number;
   status: ScheduleStatus;
   priority: string;
-  animal_id?: number;
+  animal_ids?: number[];
   location_id?: number;
   assigned_to_id?: number;
   created_by_id?: number;
@@ -367,7 +367,7 @@ export interface CareScheduleCreateRequest {
   reminder_hours_before?: number;
   status?: ScheduleStatus;
   priority?: string;
-  animal_id?: number;
+  animal_ids?: number[];
   location_id?: number;
   assigned_to_id?: number;
   notes?: string;
@@ -404,7 +404,7 @@ export interface UpcomingTask {
   care_type: CareType;
   due_date: string;
   priority: string;
-  animal_id?: number;
+  animal_ids?: number[];
   location_id?: number;
   assigned_to_id?: number;
   status: string;

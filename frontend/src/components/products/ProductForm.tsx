@@ -16,7 +16,7 @@ import {
 } from '@fluentui/react-components';
 import { productsApi } from '../../services/api';
 import { ProductCategory } from '../../types';
-import type { ProductCreateRequest, Product } from '../../types';
+import type { ProductCreateRequest, Product, ProductCategory as ProductCategoryType } from '../../types';
 
 interface ProductFormProps {
   product?: Product;
@@ -167,7 +167,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, isEdit = false }) =>
                 id="category"
                 value={formData.category.replace('_', ' ')}
                 selectedOptions={[formData.category]}
-                onOptionSelect={(_, data) => setFormData(prev => ({ ...prev, category: data.optionValue as string }))}
+                onOptionSelect={(_, data) => setFormData(prev => ({ ...prev, category: data.optionValue as ProductCategoryType }))}
               >
                 <Option value={ProductCategory.PET_FOOD}>Pet Food</Option>
                 <Option value={ProductCategory.EGGS}>Eggs</Option>

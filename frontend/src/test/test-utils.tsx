@@ -20,11 +20,6 @@ const createTestQueryClient = () =>
         networkMode: 'offlineFirst',
       },
     },
-    logger: {
-      log: () => {},
-      warn: () => {},
-      error: () => {}, // Suppress query errors in tests
-    },
   });
 
 interface AllTheProvidersProps {

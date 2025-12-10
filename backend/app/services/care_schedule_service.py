@@ -8,8 +8,10 @@ from app.models.care_schedule import (
     CareType,
     RecurrenceType,
     ScheduleStatus,
-    TaskStatus
+    TaskStatus,
+    care_schedule_animals
 )
+from app.models.animal import Animal
 from app.schemas.care_schedule import (
     CareScheduleCreate,
     CareScheduleUpdate,
@@ -40,7 +42,8 @@ class CareScheduleService:
         query = self.db.query(CareSchedule)
 
         if animal_id:
-            query = query.filter(CareSchedule.animal_id == animal_id)
+            # Filter by animal using the many-to-many relationship
+            query = query.join(CareSchedule.animals).filter(Animal.id == animal_id)
         if location_id:
             query = query.filter(CareSchedule.location_id == location_id)
         if care_type:
@@ -58,12 +61,22 @@ class CareScheduleService:
 
     def create_schedule(self, schedule: CareScheduleCreate, user_id: int) -> CareSchedule:
         """Create a new care schedule"""
+        # Extract animal_ids before creating the schedule
+        animal_ids = schedule.animal_ids
+        schedule_data = schedule.model_dump(exclude={'animal_ids'})
+
         # Set next_due_date to start_date initially
         db_schedule = CareSchedule(
-            **schedule.model_dump(),
+            **schedule_data,
             next_due_date=schedule.start_date,
             created_by_id=user_id
         )
+
+        # Add animals to the schedule
+        if animal_ids:
+            animals = self.db.query(Animal).filter(Animal.id.in_(animal_ids)).all()
+            db_schedule.animals = animals
+
         self.db.add(db_schedule)
         self.db.commit()
         self.db.refresh(db_schedule)
@@ -76,6 +89,14 @@ class CareScheduleService:
             return None
 
         update_data = schedule_update.model_dump(exclude_unset=True)
+
+        # Handle animal_ids separately
+        animal_ids = update_data.pop('animal_ids', None)
+        if animal_ids is not None:
+            animals = self.db.query(Animal).filter(Animal.id.in_(animal_ids)).all()
+            db_schedule.animals = animals
+
+        # Update other fields
         for field, value in update_data.items():
             setattr(db_schedule, field, value)
 
@@ -125,13 +146,16 @@ class CareScheduleService:
             else:
                 status = "PENDING"
 
+            # Get animal IDs from the many-to-many relationship
+            animal_ids = [animal.id for animal in schedule.animals]
+
             tasks.append(UpcomingTask(
                 schedule_id=schedule.id,
                 title=schedule.title,
                 care_type=schedule.care_type,
                 due_date=schedule.next_due_date,
                 priority=schedule.priority,
-                animal_id=schedule.animal_id,
+                animal_ids=animal_ids,
                 location_id=schedule.location_id,
                 assigned_to_id=schedule.assigned_to_id,
                 status=status,

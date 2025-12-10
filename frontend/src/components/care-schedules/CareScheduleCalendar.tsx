@@ -12,7 +12,6 @@ import {
   Dropdown,
   Option,
   Label,
-  Checkbox,
   Textarea
 } from '@fluentui/react-components';
 import { Checkmark24Regular, List24Regular } from '@fluentui/react-icons';
@@ -158,9 +157,13 @@ const CareScheduleCalendar: React.FC = () => {
     },
   });
 
-  const getAnimalName = (animalId: number) => {
-    const animal = animals?.find(a => a.id === animalId);
-    return animal ? (animal.name || animal.tag_number) : `Animal #${animalId}`;
+  const getAnimalNames = (animalIds: number[]) => {
+    if (!animalIds || animalIds.length === 0) return null;
+    const names = animalIds.map(id => {
+      const animal = animals?.find(a => a.id === id);
+      return animal ? (animal.name || animal.tag_number) : `Animal #${id}`;
+    });
+    return names.join(', ');
   };
 
   const formatCareType = (type: string) => {
@@ -341,9 +344,9 @@ const CareScheduleCalendar: React.FC = () => {
                         <Text size={300} style={{ color: tokens.colorNeutralForeground2 }}>
                           Due: {new Date(task.due_date).toLocaleTimeString()}
                         </Text>
-                        {task.animal_id && (
+                        {task.animal_ids && task.animal_ids.length > 0 && (
                           <Text size={300}>
-                            Animal: {getAnimalName(task.animal_id)}
+                            Animals: {getAnimalNames(task.animal_ids)}
                           </Text>
                         )}
                         {task.days_until_due < 0 && (
