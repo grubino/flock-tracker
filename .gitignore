@@ -1,4 +1,5 @@
 .claude/
+.backups/
 **/.env
 .venv/
 node_modules/

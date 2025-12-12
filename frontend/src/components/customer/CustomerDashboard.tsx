@@ -18,6 +18,7 @@ import {
 import { Search20Regular, Dismiss20Regular } from '@fluentui/react-icons';
 import { animalsApi, productsApi } from '../../services/api';
 import { AnimalType, ProductCategory } from '../../types';
+import { formatDateWithoutTimezone } from '../../utils/dateUtils';
 import type { Animal, Product } from '../../types';
 
 const useStyles = makeStyles({
@@ -347,7 +348,7 @@ const CustomerDashboard: React.FC = () => {
                     <div className={styles.cardDetails}>
                       {animal.birth_date && (
                         <Text size={300}>
-                          <strong>Birth Date:</strong> {new Date(animal.birth_date).toLocaleDateString()}
+                          <strong>Birth Date:</strong> {formatDateWithoutTimezone(animal.birth_date)}
                         </Text>
                       )}
                       {animal.sire && (

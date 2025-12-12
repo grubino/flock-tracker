@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
   Card,
   Text,
@@ -10,6 +10,7 @@ import {
   Dropdown,
   Option,
   Textarea,
+  Spinner,
   makeStyles,
   tokens
 } from '@fluentui/react-components';
@@ -61,24 +62,43 @@ const useStyles = makeStyles({
   },
 });
 
-const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
+const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false }) => {
   const styles = useStyles();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
+  const { id } = useParams<{ id: string }>();
+  const eventId = isEdit && id ? parseInt(id) : undefined;
   const preselectedAnimalId = searchParams.get('animal_id');
 
-  const [selectedAnimalIds, setSelectedAnimalIds] = useState<string[]>(
-    event?.animal_id ? [event.animal_id.toString()] : (preselectedAnimalId ? [preselectedAnimalId] : [])
-  );
-  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>(
-    event?.event_type ? [event.event_type] : [EventType.HEALTH_CHECK]
-  );
-  const [eventDate, setEventDate] = useState(
-    event?.event_date ? event.event_date.split('T')[0] : new Date().toISOString().split('T')[0]
-  );
-  const [description, setDescription] = useState(event?.description || '');
-  const [notes, setNotes] = useState(event?.notes || '');
+  // Fetch event data if in edit mode
+  const { data: fetchedEvent, isLoading: eventLoading } = useQuery({
+    queryKey: ['event', eventId],
+    queryFn: () => eventsApi.getById(eventId!).then(res => res.data),
+    enabled: isEdit && !!eventId,
+  });
+
+  const event = propEvent || fetchedEvent;
+
+  const [selectedAnimalIds, setSelectedAnimalIds] = useState<string[]>([]);
+  const [selectedEventTypes, setSelectedEventTypes] = useState<string[]>([EventType.HEALTH_CHECK]);
+  const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
+  const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
+
+  // Update form state when event data is loaded
+  useEffect(() => {
+    if (event) {
+      setSelectedAnimalIds(event.animal_id ? [event.animal_id.toString()] : []);
+      setSelectedEventTypes(event.event_type ? [event.event_type] : [EventType.HEALTH_CHECK]);
+      // Extract just the date part without timezone conversion
+      setEventDate(event.event_date ? event.event_date : new Date().toISOString().split('T')[0]);
+      setDescription(event.description || '');
+      setNotes(event.notes || '');
+    } else if (preselectedAnimalId && !isEdit) {
+      setSelectedAnimalIds([preselectedAnimalId]);
+    }
+  }, [event, preselectedAnimalId, isEdit]);
 
   const { data: animals } = useQuery({
     queryKey: ['animals'],
@@ -126,6 +146,24 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
   }, [selectedAnimalIds, selectedEventTypes]);
 
   const isBulkMode = eventCount > 1;
+
+  // Get display value for animal dropdown
+  const animalDropdownValue = useMemo(() => {
+    if (!animals || selectedAnimalIds.length === 0) return '';
+
+    if (isEdit && selectedAnimalIds.length === 1) {
+      // In edit mode, show the selected animal's name
+      const selectedAnimal = animals.find(a => a.id.toString() === selectedAnimalIds[0]);
+      if (selectedAnimal) {
+        return `${selectedAnimal.name || selectedAnimal.tag_number} (${selectedAnimal.animal_type === 'sheep' && selectedAnimal.sheep_gender ? selectedAnimal.sheep_gender : selectedAnimal.animal_type})`;
+      }
+    }
+
+    // In create mode with multiple selections, show count
+    return selectedAnimalIds.length > 0
+      ? `${selectedAnimalIds.length} animal${selectedAnimalIds.length !== 1 ? 's' : ''} selected`
+      : '';
+  }, [animals, selectedAnimalIds, isEdit]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,6 +215,16 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
     }
   };
 
+  if (isEdit && eventLoading) {
+    return (
+      <div className={styles.container}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+          <Spinner size="large" label="Loading event..." />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
       <Text as="h1" size={800} weight="bold" style={{ marginBottom: tokens.spacingVerticalL }}>
@@ -203,14 +251,10 @@ const EventForm: React.FC<EventFormProps> = ({ event, isEdit = false }) => {
             </Label>
             <Dropdown
               multiselect={!isEdit}
-              value={selectedAnimalIds.length > 0 ? selectedAnimalIds.join(', ') : ''}
+              value={animalDropdownValue}
               selectedOptions={selectedAnimalIds}
               onOptionSelect={(_, data) => {
-                if (isEdit) {
-                  setSelectedAnimalIds(data.selectedOptions);
-                } else {
-                  setSelectedAnimalIds(data.selectedOptions);
-                }
+                setSelectedAnimalIds(data.selectedOptions);
               }}
               placeholder="Select animal(s)"
             >

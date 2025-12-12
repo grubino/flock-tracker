@@ -87,7 +87,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
         animal_type: currentAnimal.animal_type || AnimalType.SHEEP,
         sheep_gender: currentAnimal.sheep_gender || undefined,
         chicken_gender: currentAnimal.chicken_gender || undefined,
-        birth_date: currentAnimal.birth_date ? currentAnimal.birth_date.split('T')[0] : '',
+        birth_date: currentAnimal.birth_date || '',
         current_location_id: currentAnimal.current_location_id || undefined,
         sire_id: currentAnimal.sire_id || undefined,
         dam_id: currentAnimal.dam_id || undefined,

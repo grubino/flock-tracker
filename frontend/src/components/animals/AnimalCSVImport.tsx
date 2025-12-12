@@ -11,6 +11,7 @@ import {
 import { ArrowUpload24Regular, AnimalRabbit24Regular, Checkmark24Regular, Dismiss24Regular } from '@fluentui/react-icons';
 import { animalsApi } from '../../services/api';
 import type { Animal } from '../../generated/models';
+import { formatDateWithoutTimezone } from '../../utils/dateUtils';
 
 const useStyles = makeStyles({
   container: {
@@ -279,7 +280,7 @@ const AnimalCSVImport: React.FC = () => {
                   <Text size={200}>
                     <strong>{animal.tag_number}</strong> - {animal.name || 'Unnamed'} ({animal.animal_type})
                     {animal.sheep_gender && ` - ${animal.sheep_gender}`}
-                    {animal.birth_date && ` - Born: ${new Date(animal.birth_date).toLocaleDateString()}`}
+                    {animal.birth_date && ` - Born: ${formatDateWithoutTimezone(animal.birth_date)}`}
                   </Text>
                 </div>
               ))}
