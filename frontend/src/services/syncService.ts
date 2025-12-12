@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { AxiosRequestConfig } from 'axios';
+import type { AxiosRequestConfig, Method } from 'axios';
 import { offlineQueue } from './offlineQueue';
 import type { QueuedRequest } from './offlineQueue';
 
@@ -78,7 +78,7 @@ class SyncService {
 
   private async executeRequest(request: QueuedRequest): Promise<void> {
     const config: AxiosRequestConfig = {
-      method: request.method as any,
+      method: request.method as Method,
       url: request.url,
       data: request.data,
       headers: {

@@ -10,11 +10,12 @@ import {
   tokens,
   Spinner
 } from '@fluentui/react-components';
-import { animalsApi, eventsApi } from '../../services/api';
-import { AnimalType } from '../../types';
+import { animalsApi, eventsApi, careSchedulesApi } from '../../services/api';
+import { AnimalType, CareType, ScheduleStatus } from '../../types';
 import { PhotoGallery } from '../PhotoGallery';
 import { FamilyTree } from './FamilyTree';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
+import { formatDateWithoutTimezone } from '../../utils/dateUtils';
 
 const useStyles = makeStyles({
   container: {
@@ -119,6 +120,11 @@ const AnimalDetail: React.FC = () => {
     queryFn: () => eventsApi.getByAnimal(animalId).then(res => res.data),
   });
 
+  const { data: careSchedules, isLoading: careSchedulesLoading } = useQuery({
+    queryKey: ['careSchedules', animalId],
+    queryFn: () => careSchedulesApi.getAll({ animal_id: animalId }).then(res => res.data),
+  });
+
   if (animalLoading) {
     return (
       <div className={styles.loadingContainer}>
@@ -212,7 +218,7 @@ const AnimalDetail: React.FC = () => {
                 <div className={styles.field}>
                   <Text size={300} className={styles.label}>Birth Date</Text>
                   <Text size={400} className={styles.value}>
-                    {new Date(animal.birth_date).toLocaleDateString()}
+                    {formatDateWithoutTimezone(animal.birth_date)}
                   </Text>
                 </div>
               )}
@@ -264,81 +270,173 @@ const AnimalDetail: React.FC = () => {
             </div>
           </div>
         </div>
+      </Card>
 
-        <div style={{ marginTop: tokens.spacingVerticalXL }}>
-          <div className={styles.header}>
-            <Text as="h2" size={600} weight="semibold">Events</Text>
+      {/* Events Section */}
+      <Card className={styles.card} style={{ marginTop: tokens.spacingVerticalXL }}>
+        <div className={styles.header}>
+          <Text as="h2" size={600} weight="semibold">Events</Text>
+          {canWrite && (
+            <RouterLink to={`/events/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
+              <Button appearance="primary" className={styles.headerButton}>
+                Add Event
+              </Button>
+            </RouterLink>
+          )}
+        </div>
+
+        {eventsLoading ? (
+          <div className={styles.loadingContainer}>
+            <Spinner label="Loading events..." />
+          </div>
+        ) : events && events.length > 0 ? (
+          <div>
+            {events.map(event => (
+              <Card key={event.id} className={styles.eventCard}>
+                <div className={styles.eventHeader}>
+                  <div>
+                    <Text size={500} weight="medium" style={{ textTransform: 'capitalize' }}>
+                      {event.event_type.replace('_', ' ')}
+                    </Text>
+                    <Text size={300} style={{ display: 'block', color: tokens.colorNeutralForeground2 }}>
+                      {formatDateWithoutTimezone(event.event_date)}
+                    </Text>
+                    {event.description && (
+                      <Text size={300} style={{ display: 'block', marginTop: tokens.spacingVerticalXS }}>
+                        {event.description}
+                      </Text>
+                    )}
+                    {event.notes && (
+                      <Text size={200} style={{
+                        display: 'block',
+                        marginTop: tokens.spacingVerticalXS,
+                        color: tokens.colorNeutralForeground2
+                      }}>
+                        {event.notes}
+                      </Text>
+                    )}
+                  </div>
+                  {canWrite && (
+                    <RouterLink to={`/events/${event.id}/edit`} style={{ textDecoration: 'none', flex: 1 }}>
+                      <Button appearance="subtle" size="small" style={{ width: '100%' }}>
+                        Edit
+                      </Button>
+                    </RouterLink>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <Text style={{ marginBottom: tokens.spacingVerticalM, display: 'block' }}>
+              No events recorded for this animal
+            </Text>
             {canWrite && (
               <RouterLink to={`/events/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
-                <Button appearance="primary" className={styles.headerButton}>
-                  Add Event
+                <Button appearance="primary">
+                  Add the first event
                 </Button>
               </RouterLink>
             )}
           </div>
+        )}
+      </Card>
 
-          {eventsLoading ? (
-            <div className={styles.loadingContainer}>
-              <Spinner label="Loading events..." />
-            </div>
-          ) : events && events.length > 0 ? (
-            <div>
-              {events.map(event => (
-                <Card key={event.id} className={styles.eventCard}>
-                  <div className={styles.eventHeader}>
-                    <div>
-                      <Text size={500} weight="medium" style={{ textTransform: 'capitalize' }}>
-                        {event.event_type.replace('_', ' ')}
-                      </Text>
-                      <Text size={300} style={{ display: 'block', color: tokens.colorNeutralForeground2 }}>
-                        {new Date(event.event_date).toLocaleDateString()}
-                      </Text>
-                      {event.description && (
-                        <Text size={300} style={{ display: 'block', marginTop: tokens.spacingVerticalXS }}>
-                          {event.description}
-                        </Text>
-                      )}
-                      {event.notes && (
-                        <Text size={200} style={{
-                          display: 'block',
-                          marginTop: tokens.spacingVerticalXS,
-                          color: tokens.colorNeutralForeground2
-                        }}>
-                          {event.notes}
-                        </Text>
-                      )}
-                    </div>
-                    {canWrite && (
-                      <RouterLink to={`/events/${event.id}/edit`} style={{ textDecoration: 'none', flex: 1 }}>
-                        <Button appearance="subtle" size="small" style={{ width: '100%' }}>
-                          Edit
-                        </Button>
-                      </RouterLink>
-                    )}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.emptyState}>
-              <Text style={{ marginBottom: tokens.spacingVerticalM, display: 'block' }}>
-                No events recorded for this animal
-              </Text>
-              {canWrite && (
-                <RouterLink to={`/events/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
-                  <Button appearance="primary">
-                    Add the first event
-                  </Button>
-                </RouterLink>
-              )}
-            </div>
+      {/* Care Schedules Section */}
+      <Card className={styles.card} style={{ marginTop: tokens.spacingVerticalXL }}>
+        <div className={styles.header}>
+          <Text as="h2" size={600} weight="semibold">Care Schedules</Text>
+          {canWrite && (
+            <RouterLink to={`/care-schedules/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
+              <Button appearance="primary" className={styles.headerButton}>
+                Add Care Schedule
+              </Button>
+            </RouterLink>
           )}
         </div>
 
-        {/* Photo Gallery Section */}
-        <PhotoGallery animalId={animal.id} canUpload={canWrite} />
+        {careSchedulesLoading ? (
+          <div className={styles.loadingContainer}>
+            <Spinner label="Loading care schedules..." />
+          </div>
+        ) : careSchedules && careSchedules.length > 0 ? (
+          <div>
+            {careSchedules.map(schedule => (
+              <Card key={schedule.id} className={styles.eventCard}>
+                <div className={styles.eventHeader}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS, marginBottom: tokens.spacingVerticalXS }}>
+                      <Text size={500} weight="medium">
+                        {schedule.title}
+                      </Text>
+                      <Badge
+                        appearance="filled"
+                        color={
+                          schedule.status === ScheduleStatus.ACTIVE ? 'success' :
+                          schedule.status === ScheduleStatus.PAUSED ? 'warning' :
+                          schedule.status === ScheduleStatus.COMPLETED ? 'brand' :
+                          'subtle'
+                        }
+                      >
+                        {schedule.status}
+                      </Badge>
+                    </div>
+                    <Text size={300} style={{ display: 'block', color: tokens.colorNeutralForeground2 }}>
+                      Type: {schedule.care_type.replace(/_/g, ' ')} • {schedule.recurrence_type}
+                    </Text>
+                    <Text size={300} style={{ display: 'block', color: tokens.colorNeutralForeground2 }}>
+                      Next Due: {formatDateWithoutTimezone(schedule.next_due_date)}
+                    </Text>
+                    {schedule.description && (
+                      <Text size={300} style={{ display: 'block', marginTop: tokens.spacingVerticalXS }}>
+                        {schedule.description}
+                      </Text>
+                    )}
+                    {schedule.notes && (
+                      <Text size={200} style={{
+                        display: 'block',
+                        marginTop: tokens.spacingVerticalXS,
+                        color: tokens.colorNeutralForeground2
+                      }}>
+                        {schedule.notes}
+                      </Text>
+                    )}
+                  </div>
+                  {canWrite && (
+                    <RouterLink to={`/care-schedules/${schedule.id}/edit`} style={{ textDecoration: 'none', flex: 1 }}>
+                      <Button appearance="subtle" size="small" style={{ width: '100%' }}>
+                        Edit
+                      </Button>
+                    </RouterLink>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.emptyState}>
+            <Text style={{ marginBottom: tokens.spacingVerticalM, display: 'block' }}>
+              No care schedules for this animal
+            </Text>
+            {canWrite && (
+              <RouterLink to={`/care-schedules/new?animal_id=${animal.id}`} style={{ textDecoration: 'none' }}>
+                <Button appearance="primary">
+                  Add the first care schedule
+                </Button>
+              </RouterLink>
+            )}
+          </div>
+        )}
+      </Card>
 
-        {/* Family Tree Section */}
+      {/* Photo Gallery Section */}
+      <Card className={styles.card} style={{ marginTop: tokens.spacingVerticalXL }}>
+        <PhotoGallery animalId={animal.id} canUpload={canWrite} />
+      </Card>
+
+      {/* Family Tree Section */}
+      <Card className={styles.card} style={{ marginTop: tokens.spacingVerticalXL }}>
         <FamilyTree animal={animal} />
       </Card>
     </div>

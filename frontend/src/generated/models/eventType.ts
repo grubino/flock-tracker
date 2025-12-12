@@ -24,7 +24,7 @@
 export type EventType = typeof EventType[keyof typeof EventType];
 
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
+ 
 export const EventType = {
   deworming: 'deworming',
   delicing: 'delicing',

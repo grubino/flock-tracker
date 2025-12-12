@@ -20,7 +20,15 @@ export const EventType = {
   MITE_TREATMENT: "mite_treatment",
   LAMBING: "lambing",
   HEALTH_CHECK: "health_check",
+  MEDICATION: "medication",
+  BREEDING: "breeding",
+  BIRTH: "birth",
   DEATH: "death",
+  INJURY: "injury",
+  TREATMENT: "treatment",
+  SLAUGHTER: "slaughter",
+  SOLD: "sold",
+  BRED: "bred",
   OTHER: "other"
 } as const;
 
@@ -50,12 +58,57 @@ export const ProductCategory = {
   OTHER: "other"
 } as const;
 
+export const CareType = {
+  FEEDING: "FEEDING",
+  WATERING: "WATERING",
+  DEWORMING: "DEWORMING",
+  DELICING: "DELICING",
+  VACCINATION: "VACCINATION",
+  HEALTH_CHECK: "HEALTH_CHECK",
+  HOOF_TRIM: "HOOF_TRIM",
+  SHEARING: "SHEARING",
+  GROOMING: "GROOMING",
+  BREEDING_CHECK: "BREEDING_CHECK",
+  MEDICATION: "MEDICATION",
+  MITE_TREATMENT: "MITE_TREATMENT",
+  CLEANING: "CLEANING",
+  OTHER: "OTHER"
+} as const;
+
+export const RecurrenceType = {
+  ONCE: "ONCE",
+  DAILY: "DAILY",
+  WEEKLY: "WEEKLY",
+  BIWEEKLY: "BIWEEKLY",
+  MONTHLY: "MONTHLY",
+  QUARTERLY: "QUARTERLY",
+  YEARLY: "YEARLY"
+} as const;
+
+export const ScheduleStatus = {
+  ACTIVE: "ACTIVE",
+  PAUSED: "PAUSED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED"
+} as const;
+
+export const TaskStatus = {
+  PENDING: "PENDING",
+  OVERDUE: "OVERDUE",
+  COMPLETED: "COMPLETED",
+  SKIPPED: "SKIPPED"
+} as const;
+
 export type AnimalType = typeof AnimalType[keyof typeof AnimalType];
 export type SheepGender = typeof SheepGender[keyof typeof SheepGender];
 export type ChickenGender = typeof ChickenGender[keyof typeof ChickenGender];
 export type EventType = typeof EventType[keyof typeof EventType];
 export type ExpenseCategory = typeof ExpenseCategory[keyof typeof ExpenseCategory];
 export type ProductCategory = typeof ProductCategory[keyof typeof ProductCategory];
+export type CareType = typeof CareType[keyof typeof CareType];
+export type RecurrenceType = typeof RecurrenceType[keyof typeof RecurrenceType];
+export type ScheduleStatus = typeof ScheduleStatus[keyof typeof ScheduleStatus];
+export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
 
 export interface Photograph {
   id: number;
@@ -274,4 +327,93 @@ export interface ProductCreateRequest {
   sku?: string;
   image_url?: string;
   is_active?: boolean;
+}
+
+export interface CareSchedule {
+  id: number;
+  title: string;
+  description?: string;
+  care_type: CareType;
+  recurrence_type: RecurrenceType;
+  start_date: string;
+  end_date?: string;
+  next_due_date: string;
+  recurrence_interval: number;
+  reminder_enabled: boolean;
+  reminder_days_before: number;
+  reminder_hours_before: number;
+  status: ScheduleStatus;
+  priority: string;
+  animal_ids?: number[];
+  location_id?: number;
+  assigned_to_id?: number;
+  created_by_id?: number;
+  notes?: string;
+  estimated_duration_minutes?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CareScheduleCreateRequest {
+  title: string;
+  description?: string;
+  care_type: CareType;
+  recurrence_type?: RecurrenceType;
+  start_date: string;
+  end_date?: string;
+  recurrence_interval?: number;
+  reminder_enabled?: boolean;
+  reminder_days_before?: number;
+  reminder_hours_before?: number;
+  status?: ScheduleStatus;
+  priority?: string;
+  animal_ids?: number[];
+  location_id?: number;
+  assigned_to_id?: number;
+  notes?: string;
+  estimated_duration_minutes?: number;
+}
+
+export interface CareCompletion {
+  id: number;
+  schedule_id: number;
+  scheduled_date: string;
+  completed_date: string;
+  completed_by_id?: number;
+  status: TaskStatus;
+  notes?: string;
+  duration_minutes?: number;
+  event_id?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CareCompletionCreateRequest {
+  schedule_id: number;
+  scheduled_date: string;
+  completed_date: string;
+  status?: TaskStatus;
+  notes?: string;
+  duration_minutes?: number;
+  event_id?: number;
+}
+
+export interface UpcomingTask {
+  schedule_id: number;
+  title: string;
+  care_type: CareType;
+  due_date: string;
+  priority: string;
+  animal_ids?: number[];
+  location_id?: number;
+  assigned_to_id?: number;
+  status: string;
+  days_until_due: number;
+}
+
+export interface TaskSummary {
+  pending_count: number;
+  overdue_count: number;
+  completed_today_count: number;
+  upcoming_7_days_count: number;
 }

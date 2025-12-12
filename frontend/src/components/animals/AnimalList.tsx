@@ -15,12 +15,15 @@ import {
   Label,
   Dropdown,
   Option,
-  Checkbox
+  Checkbox,
+  type SelectTabData,
+  type SelectTabEvent
 } from '@fluentui/react-components';
 import { Dismiss24Regular } from '@fluentui/react-icons';
 import { animalsApi, locationsApi, eventsApi } from '../../services/api';
 import { AnimalType, SheepGender, ChickenGender, EventType } from '../../types';
 import type { Animal } from '../../types';
+import { formatDateWithoutTimezone, parseDateWithoutTimezone } from '../../utils/dateUtils';
 
 // Get server URL from localStorage or fall back to environment variable
 const getServerUrl = (): string => {
@@ -174,7 +177,7 @@ const AnimalList: React.FC = () => {
     queryFn: () => eventsApi.getAll().then(res => res.data),
   });
 
-  const handleTabSelect = (_event: any, data: any) => {
+  const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setSelectedTab(data.value as string);
   };
 
@@ -237,12 +240,12 @@ const AnimalList: React.FC = () => {
 
       // Filter by birth date range
       if (birthDateFrom && animal.birth_date) {
-        if (new Date(animal.birth_date) < new Date(birthDateFrom)) {
+        if (parseDateWithoutTimezone(animal.birth_date) < parseDateWithoutTimezone(birthDateFrom)) {
           return false;
         }
       }
       if (birthDateTo && animal.birth_date) {
-        if (new Date(animal.birth_date) > new Date(birthDateTo)) {
+        if (parseDateWithoutTimezone(animal.birth_date) > parseDateWithoutTimezone(birthDateTo)) {
           return false;
         }
       }
@@ -436,7 +439,7 @@ const AnimalList: React.FC = () => {
               <div className={styles.cardDetails}>
                 {animal.birth_date && (
                   <Text size={300}>
-                    <strong>Birth Date:</strong> {new Date(animal.birth_date).toLocaleDateString()}
+                    <strong>Birth Date:</strong> {formatDateWithoutTimezone(animal.birth_date)}
                   </Text>
                 )}
                 {animal.sire && (

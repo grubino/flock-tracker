@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -24,7 +24,7 @@ class Animal(Base):
     tag_number = Column(String, unique=True, index=True, nullable=False)
     animal_type = Column(SQLEnum(AnimalType), nullable=False)
     sheep_gender = Column(SQLEnum(SheepGender), nullable=True)
-    birth_date = Column(DateTime, nullable=True)
+    birth_date = Column(Date, nullable=True)
     is_sellable = Column(Boolean, default=False)
 
     # Current location
@@ -44,6 +44,7 @@ class Animal(Base):
     current_location = relationship("Location", foreign_keys=[current_location_id])
     events = relationship("Event", back_populates="animal", cascade="all, delete-orphan")
     photographs = relationship("Photograph", back_populates="animal", cascade="all, delete-orphan")
+    care_schedules = relationship("CareSchedule", secondary="care_schedule_animals", back_populates="animals")
 
     def __repr__(self):
         return f"<Animal(id={self.id}, tag_number='{self.tag_number}', type='{self.animal_type.value}', name='{self.name}')>"
