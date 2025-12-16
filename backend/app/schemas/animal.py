@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, date
 from app.models.animal import AnimalType, SheepGender
 
 
@@ -9,7 +9,7 @@ class AnimalBase(BaseModel):
     tag_number: str = Field(..., description="Unique tag number for the animal")
     animal_type: AnimalType = Field(..., description="Type of animal (sheep, chicken, hive)")
     sheep_gender: Optional[SheepGender] = Field(None, description="Gender for sheep (ewe or ram)")
-    birth_date: Optional[datetime] = None
+    birth_date: Optional[date] = None
     current_location_id: Optional[int] = None
     sire_id: Optional[int] = None
     dam_id: Optional[int] = None
@@ -26,7 +26,7 @@ class AnimalUpdate(BaseModel):
     tag_number: Optional[str] = None
     animal_type: Optional[AnimalType] = None
     sheep_gender: Optional[SheepGender] = None
-    birth_date: Optional[datetime] = None
+    birth_date: Optional[date] = None
     current_location_id: Optional[int] = None
     sire_id: Optional[int] = None
     dam_id: Optional[int] = None

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
+import fs from 'fs'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,9 +11,13 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, '../backend/certs/key.pem')),
+      cert: fs.readFileSync(path.resolve(__dirname, '../backend/certs/cert.pem')),
+    },
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'https://localhost:8000',
         changeOrigin: true,
         secure: false,
       }

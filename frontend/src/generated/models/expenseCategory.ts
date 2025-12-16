@@ -24,7 +24,7 @@
 export type ExpenseCategory = typeof ExpenseCategory[keyof typeof ExpenseCategory];
 
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
+ 
 export const ExpenseCategory = {
   feed: 'feed',
   seed: 'seed',

@@ -24,6 +24,7 @@ import {
   FullScreenMaximize24Regular,
 } from '@fluentui/react-icons';
 import { useGetAnimalPhotographsApiPhotographsAnimalAnimalIdGet, useSetPrimaryPhotographApiPhotographsPhotographIdSetPrimaryPost, useDeletePhotographApiPhotographsPhotographIdDelete } from '../generated/api';
+import type { Photograph } from '../generated/models';
 import { PhotoUpload } from './PhotoUpload';
 
 // Get server URL from localStorage or fall back to environment variable
@@ -118,7 +119,7 @@ interface PhotoGalleryProps {
 export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload = true }) => {
   const styles = useStyles();
   const queryClient = useQueryClient();
-  const [selectedPhoto, setSelectedPhoto] = useState<any>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photograph | null>(null);
   const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
 
@@ -155,7 +156,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload 
     setShowUpload(false);
   };
 
-  const openFullscreen = (photo: any) => {
+  const openFullscreen = (photo: Photograph) => {
     setSelectedPhoto(photo);
     setIsFullscreenOpen(true);
   };

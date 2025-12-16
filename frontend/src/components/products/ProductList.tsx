@@ -19,6 +19,8 @@ import {
   DialogBody,
   DialogActions,
   DialogContent,
+  type SelectTabData,
+  type SelectTabEvent
 } from '@fluentui/react-components';
 import { Delete24Regular } from '@fluentui/react-icons';
 import { productsApi } from '../../services/api';
@@ -138,7 +140,7 @@ const ProductList: React.FC = () => {
     },
   });
 
-  const handleTabSelect = (_event: any, data: any) => {
+  const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setSelectedTab(data.value as string);
   };
 

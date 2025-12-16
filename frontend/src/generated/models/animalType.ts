@@ -24,7 +24,7 @@
 export type AnimalType = typeof AnimalType[keyof typeof AnimalType];
 
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
+ 
 export const AnimalType = {
   sheep: 'sheep',
   chicken: 'chicken',

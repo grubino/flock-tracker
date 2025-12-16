@@ -11,11 +11,14 @@ import {
   TabList,
   Tab,
   Input,
-  Button
+  Button,
+  type SelectTabData,
+  type SelectTabEvent
 } from '@fluentui/react-components';
 import { Search20Regular, Dismiss20Regular } from '@fluentui/react-icons';
 import { animalsApi, productsApi } from '../../services/api';
 import { AnimalType, ProductCategory } from '../../types';
+import { formatDateWithoutTimezone } from '../../utils/dateUtils';
 import type { Animal, Product } from '../../types';
 
 const useStyles = makeStyles({
@@ -100,11 +103,11 @@ const CustomerDashboard: React.FC = () => {
     enabled: mainTab === 'products',
   });
 
-  const handleTabSelect = (_event: any, data: any) => {
+  const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setSelectedTab(data.value as string);
   };
 
-  const handleMainTabSelect = (_event: any, data: any) => {
+  const handleMainTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setMainTab(data.value as string);
     setSelectedTab('all');
     setSearchQuery('');
@@ -345,7 +348,7 @@ const CustomerDashboard: React.FC = () => {
                     <div className={styles.cardDetails}>
                       {animal.birth_date && (
                         <Text size={300}>
-                          <strong>Birth Date:</strong> {new Date(animal.birth_date).toLocaleDateString()}
+                          <strong>Birth Date:</strong> {formatDateWithoutTimezone(animal.birth_date)}
                         </Text>
                       )}
                       {animal.sire && (

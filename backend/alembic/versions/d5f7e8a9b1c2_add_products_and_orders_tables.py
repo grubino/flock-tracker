@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(), nullable=False),
         sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('category', sa.Enum('MEAT', 'EGGS', 'WOOL', 'HONEY', 'DAIRY', 'VEGETABLES', 'FRUITS', 'PROCESSED', 'OTHER', name='productcategory'), nullable=False),
+        sa.Column('category', sa.Enum('PET_FOOD', 'MEAT', 'EGGS', 'WOOL', 'HONEY', 'DAIRY', 'VEGETABLES', 'FRUITS', 'PROCESSED', 'OTHER', name='productcategory'), nullable=False),
         sa.Column('price', sa.Float(), nullable=False),
         sa.Column('inventory_quantity', sa.Integer(), nullable=False),
         sa.Column('unit', sa.String(), nullable=False),
