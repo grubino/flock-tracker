@@ -127,7 +127,7 @@ def update_event(
 def delete_event(
     event_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin)
+    current_user: User = Depends(require_user)
 ):
     """Delete an event"""
     service = EventService(db)

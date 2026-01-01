@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Text,
@@ -12,9 +12,16 @@ import {
   Dropdown,
   Option,
   Input,
-  Label
+  Label,
+  Dialog,
+  DialogTrigger,
+  DialogSurface,
+  DialogTitle,
+  DialogBody,
+  DialogActions,
+  DialogContent,
 } from '@fluentui/react-components';
-import { Dismiss24Regular } from '@fluentui/react-icons';
+import { Dismiss24Regular, Delete24Regular } from '@fluentui/react-icons';
 import { eventsApi, animalsApi } from '../../services/api';
 import { EventType, AnimalType } from '../../types';
 import type { Event } from '../../types';
@@ -138,6 +145,7 @@ const useStyles = makeStyles({
 
 const EventList: React.FC = () => {
   const styles = useStyles();
+  const queryClient = useQueryClient();
 
   // Filter state
   const [selectedAnimalType, setSelectedAnimalType] = useState<string>('');
@@ -145,6 +153,10 @@ const EventList: React.FC = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [selectedAnimalId, setSelectedAnimalId] = useState<string>('');
+
+  // Delete state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<number | null>(null);
 
   // Build filter params
   const filterParams = useMemo(() => {
@@ -165,6 +177,26 @@ const EventList: React.FC = () => {
     queryKey: ['animals'],
     queryFn: () => animalsApi.getAll().then(res => res.data),
   });
+
+  const deleteEventMutation = useMutation({
+    mutationFn: (eventId: number) => eventsApi.delete(eventId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      setDeleteDialogOpen(false);
+      setEventToDelete(null);
+    },
+  });
+
+  const handleDeleteClick = (eventId: number) => {
+    setEventToDelete(eventId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (eventToDelete) {
+      deleteEventMutation.mutate(eventToDelete);
+    }
+  };
 
   // Filter events by animal type on the frontend
   const filteredEvents = useMemo(() => {
@@ -380,6 +412,15 @@ const EventList: React.FC = () => {
                       Edit
                     </Button>
                   </RouterLink>
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    icon={<Delete24Regular />}
+                    onClick={() => handleDeleteClick(event.id)}
+                    style={{ flex: 1 }}
+                  >
+                    Delete
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -403,6 +444,30 @@ const EventList: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Delete Event Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={(_, data) => setDeleteDialogOpen(data.open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Delete Event</DialogTitle>
+            <DialogContent>
+              Are you sure you want to delete this event? This action cannot be undone.
+            </DialogContent>
+            <DialogActions>
+              <DialogTrigger disableButtonEnhancement>
+                <Button appearance="secondary">Cancel</Button>
+              </DialogTrigger>
+              <Button
+                appearance="primary"
+                onClick={handleConfirmDelete}
+                disabled={deleteEventMutation.isPending}
+              >
+                {deleteEventMutation.isPending ? 'Deleting...' : 'Delete'}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 };
