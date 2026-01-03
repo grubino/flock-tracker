@@ -172,6 +172,27 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
     return true; // For hives, no gender filtering
   });
 
+  const selectedLocationDisplay = formData.current_location_id
+    ? locations?.find(l => l.id === formData.current_location_id)
+      ? (() => {
+          const loc = locations.find(l => l.id === formData.current_location_id)!;
+          return `${loc.name}${loc.paddock_name ? ` - ${loc.paddock_name}` : ''}`;
+        })()
+      : formData.current_location_id.toString()
+    : '';
+
+  const selectedSireDisplay = formData.sire_id
+    ? availableSires?.find(a => a.id === formData.sire_id)
+      ? (availableSires.find(a => a.id === formData.sire_id)!.name || availableSires.find(a => a.id === formData.sire_id)!.tag_number)
+      : formData.sire_id.toString()
+    : '';
+
+  const selectedDamDisplay = formData.dam_id
+    ? availableDams?.find(a => a.id === formData.dam_id)
+      ? (availableDams.find(a => a.id === formData.dam_id)!.name || availableDams.find(a => a.id === formData.dam_id)!.tag_number)
+      : formData.dam_id.toString()
+    : '';
+
   return (
     <div className={styles.container}>
       <Text as="h1" size={800} weight="bold" style={{ marginBottom: tokens.spacingVerticalL }}>
@@ -271,7 +292,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
             <div className={styles.field}>
               <Label htmlFor="current_location_id">Current Location</Label>
               <Dropdown
-                value={formData.current_location_id?.toString() || ''}
+                value={selectedLocationDisplay}
                 selectedOptions={formData.current_location_id ? [formData.current_location_id.toString()] : []}
                 onOptionSelect={(_, data) =>
                   handleChange({ target: { name: 'current_location_id', value: data.optionValue } } as React.ChangeEvent<HTMLInputElement>)
@@ -279,53 +300,62 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
                 placeholder="Select Location"
               >
                 <Option value="" text="No Location">No Location</Option>
-                {locations?.map(location => (
-                  <Option
-                    key={location.id}
-                    value={location.id.toString()}
-                    text={`${location.name}${location.paddock_name ? ` - ${location.paddock_name}` : ''}`}
-                  >
-                    {location.name}{location.paddock_name ? ` - ${location.paddock_name}` : ''}
-                  </Option>
-                ))}
+                {locations?.map(location => {
+                  const displayName = `${location.name}${location.paddock_name ? ` - ${location.paddock_name}` : ''}`;
+                  return (
+                    <Option
+                      key={location.id}
+                      value={location.id.toString()}
+                      text={displayName}
+                    >
+                      {displayName}
+                    </Option>
+                  );
+                })}
               </Dropdown>
             </div>
 
             <div className={styles.field}>
               <Label htmlFor="sire_id">Sire</Label>
               <Dropdown
-                value={formData.sire_id?.toString() || ''}
+                value={selectedSireDisplay}
                 selectedOptions={formData.sire_id ? [formData.sire_id.toString()] : []}
                 onOptionSelect={(_, data) =>
                   handleChange({ target: { name: 'sire_id', value: data.optionValue } } as React.ChangeEvent<HTMLInputElement>)
                 }
                 placeholder="Select Sire"
               >
-                <Option value="">None</Option>
-                {availableSires?.map(parent => (
-                  <Option key={parent.id} value={parent.id.toString()}>
-                    {parent.name || parent.tag_number}
-                  </Option>
-                ))}
+                <Option value="" text="None">None</Option>
+                {availableSires?.map(parent => {
+                  const displayName = parent.name || parent.tag_number;
+                  return (
+                    <Option key={parent.id} value={parent.id.toString()} text={displayName}>
+                      {displayName}
+                    </Option>
+                  );
+                })}
               </Dropdown>
             </div>
 
             <div className={styles.field}>
               <Label htmlFor="dam_id">Dam</Label>
               <Dropdown
-                value={formData.dam_id?.toString() || ''}
+                value={selectedDamDisplay}
                 selectedOptions={formData.dam_id ? [formData.dam_id.toString()] : []}
                 onOptionSelect={(_, data) =>
                   handleChange({ target: { name: 'dam_id', value: data.optionValue } } as React.ChangeEvent<HTMLInputElement>)
                 }
                 placeholder="Select Dam"
               >
-                <Option value="">None</Option>
-                {availableDams?.map(parent => (
-                  <Option key={parent.id} value={parent.id.toString()}>
-                    {parent.name || parent.tag_number}
-                  </Option>
-                ))}
+                <Option value="" text="None">None</Option>
+                {availableDams?.map(parent => {
+                  const displayName = parent.name || parent.tag_number;
+                  return (
+                    <Option key={parent.id} value={parent.id.toString()} text={displayName}>
+                      {displayName}
+                    </Option>
+                  );
+                })}
               </Dropdown>
             </div>
             </div>
