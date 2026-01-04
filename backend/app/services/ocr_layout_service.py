@@ -1,4 +1,7 @@
 import pytesseract
+# Preprocess image for better OCR
+import numpy as np
+import cv2
 from PIL import Image
 from pdf2image import convert_from_path
 import re
@@ -34,26 +37,17 @@ class OCRLayoutService:
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
 
-        # Preprocess image for better OCR
-        from PIL import ImageEnhance, ImageFilter, ImageOps
-        import numpy as np
-        import cv2
-
         # Convert to grayscale first
         image = image.convert("L")
 
         # Convert PIL to OpenCV for advanced preprocessing
         img_array = np.array(image)
 
-        # DISABLED: Deskew step - can cause receipts to rotate incorrectly
-        # If needed in the future, consider using a more robust deskew algorithm
-        # that checks text orientation first
-
         # Denoise with reduced aggressiveness
-        img_array = cv2.fastNlMeansDenoising(img_array, None, 7, 7, 21)
+        #img_array = cv2.fastNlMeansDenoising(img_array, None, 7, 7, 21)
 
         # Optional: Enhance contrast for faded receipts
-        img_array = cv2.equalizeHist(img_array)
+        #img_array = cv2.equalizeHist(img_array)
 
         # Apply adaptive thresholding (better than Otsu for variable lighting)
         img_array = cv2.adaptiveThreshold(
@@ -61,11 +55,9 @@ class OCRLayoutService:
             255,
             cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY,
-            11,  # Block size
-            2    # C constant
+            31,  # Block size
+            5    # C constant
         )
-
-        # REMOVED: Dilation - too aggressive, merges characters
 
         # Convert back to PIL - THIS is the preprocessed image we'll use
         processed_image = Image.fromarray(img_array)

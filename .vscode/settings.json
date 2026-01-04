@@ -30,5 +30,6 @@
     "coverage-gutters.coverageFileNames": [
         "backend/coverage.xml",
         "coverage.xml"
-    ]
+    ],
+    "python.analysis.autoImportCompletions": true
 }

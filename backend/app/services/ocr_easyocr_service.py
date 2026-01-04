@@ -1,6 +1,7 @@
 import os
 import easyocr
 from PIL import Image
+from PIL import Image as PILImage
 from pdf2image import convert_from_path
 import re
 from typing import Dict, List, Optional
@@ -9,6 +10,7 @@ import pandas as pd
 import numpy as np
 import cv2
 from .ocr_nlp_utils import OCRNLPUtils
+import tempfile
 
 
 class OCREasyOCRService:
@@ -24,6 +26,7 @@ class OCREasyOCRService:
             try:
                 cls._reader_instance = easyocr.Reader(
                     ['en'],  # English language
+                    detect_network='dbnet18',
                     gpu=False,  # Use CPU
                     verbose=False
                 )
@@ -34,6 +37,55 @@ class OCREasyOCRService:
                 traceback.print_exc()
                 raise
         return cls._reader_instance
+
+    @staticmethod
+    def _group_regions_into_lines(regions: List[Dict]) -> List[List[Dict]]:
+        """
+        Group text regions into lines based on vertical overlap.
+        Two regions are on the same line if their vertical ranges overlap.
+
+        Args:
+            regions: List of dicts with 'top', 'bottom', 'left' keys
+
+        Returns:
+            List of line groups, where each group is a list of regions sorted by horizontal position
+        """
+        if not regions:
+            return []
+
+        # Sort regions by vertical position (top to bottom), then horizontal (left to right)
+        sorted_regions = sorted(regions, key=lambda r: (r['top'], r['left']))
+
+        line_groups = []
+        current_line = [sorted_regions[0]]
+
+        for region in sorted_regions[1:]:
+            # Check if this region overlaps vertically with any region in the current line
+            # A region overlaps if: top1 < bottom2 AND top2 < bottom1
+            overlaps_with_current_line = False
+
+            for line_region in current_line:
+                if (region['top'] < line_region['bottom'] and
+                    line_region['top'] < region['bottom']):
+                    overlaps_with_current_line = True
+                    break
+
+            if overlaps_with_current_line:
+                # Add to current line
+                current_line.append(region)
+            else:
+                # Start a new line
+                # Sort current line by horizontal position (left to right)
+                current_line.sort(key=lambda r: r['left'])
+                line_groups.append(current_line)
+                current_line = [region]
+
+        # Don't forget the last line
+        if current_line:
+            current_line.sort(key=lambda r: r['left'])
+            line_groups.append(current_line)
+
+        return line_groups
 
     @staticmethod
     def preprocess_image(image: Image.Image) -> np.ndarray:
@@ -99,14 +151,11 @@ class OCREasyOCRService:
         img_array = OCREasyOCRService.preprocess_image(image)
 
         # Save to temp file for EasyOCR
-        import tempfile
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
         temp_path = temp_file.name
-        temp_file.close()
 
         try:
             # Save preprocessed image
-            from PIL import Image as PILImage
             PILImage.fromarray(img_array).save(temp_path)
 
             # Also save for debugging with a different name
@@ -122,8 +171,8 @@ class OCREasyOCRService:
             result = reader.readtext(temp_path)
             print(f"EasyOCR detected {len(result)} text regions")
 
-            # Convert EasyOCR result to DataFrame
-            rows = []
+            # Convert EasyOCR result to list of regions
+            regions = []
             for idx, detection in enumerate(result):
                 try:
                     # EasyOCR format: (bbox, text, confidence)
@@ -137,20 +186,20 @@ class OCREasyOCRService:
                     ys = [point[1] for point in bbox]
                     left = int(min(xs))
                     top = int(min(ys))
-                    width = int(max(xs) - min(xs))
-                    height = int(max(ys) - min(ys))
+                    width = int(max(xs) - left)
+                    height = int(max(ys) - top)
 
-                    rows.append({
-                        'text': text,
-                        'left': left,
-                        'top': top,
-                        'width': width,
-                        'height': height,
-                        'conf': conf,
-                        'line_num': idx,
-                        'block_num': 0,
-                        'par_num': 0,
-                    })
+                    # Filter low confidence immediately
+                    if conf > 30:
+                        regions.append({
+                            'text': text,
+                            'left': left,
+                            'top': top,
+                            'width': width,
+                            'height': height,
+                            'conf': conf,
+                            'bottom': top + height,
+                        })
                 except Exception as e:
                     print(f"Error processing detection {idx}: {e}")
                     continue
@@ -162,19 +211,35 @@ class OCREasyOCRService:
             except:
                 pass
 
+        # Group regions into lines based on vertical overlap
+        line_groups = OCREasyOCRService._group_regions_into_lines(regions)
+
+        # Convert to DataFrame with line numbers
+        rows = []
+        for line_num, line_regions in enumerate(line_groups):
+            for region in line_regions:
+                rows.append({
+                    'text': region['text'],
+                    'left': region['left'],
+                    'top': region['top'],
+                    'width': region['width'],
+                    'height': region['height'],
+                    'conf': region['conf'],
+                    'line_num': line_num,
+                    'block_num': 0,
+                    'par_num': 0,
+                })
+
         df = pd.DataFrame(rows)
-
-        # Filter out low confidence results (matching Tesseract threshold)
-        if not df.empty and 'conf' in df.columns:
-            df = df[df['conf'] > 30]
-
         return df
 
     @staticmethod
     def group_by_lines(df: pd.DataFrame, vertical_threshold: int = 10) -> List[Dict]:
         """
-        Group words into lines based on layout data
-        Same logic as Tesseract version
+        Group words into lines based on layout data.
+
+        Lines are already grouped by _group_regions_into_lines in get_layout_data,
+        so we just need to combine regions within each line_num group.
         """
         lines = []
 
@@ -188,59 +253,35 @@ class OCREasyOCRService:
             print(f"Warning: EasyOCR DataFrame missing columns: {missing_columns}")
             return lines
 
-        # Group by line_num
-        for line_num, group in df.groupby('line_num'):
+        # Group by line_num (regions are already sorted left-to-right within each line)
+        for line_num, group in df.groupby('line_num', sort=True):
             if len(group) == 0:
                 continue
 
-            line_text = group['text'].iloc[0] if len(group) == 1 else " ".join(group['text'].astype(str).tolist())
+            # Sort by left position to ensure proper left-to-right order
+            group = group.sort_values('left')
+
+            # Combine text from all regions in this line, left to right
+            line_text = " ".join(group['text'].astype(str).tolist())
             line_text = OCRNLPUtils.clean_ocr_text(line_text)
+
+            # Calculate the bounding box for the entire line
+            left = group['left'].min()
+            top = group['top'].min()
+            right = (group['left'] + group['width']).max()
+            bottom = (group['top'] + group['height']).max()
 
             lines.append({
                 'text': line_text,
-                'left': group['left'].min(),
-                'top': group['top'].min(),
-                'right': group['left'].max() + group.iloc[-1]['width'],
-                'bottom': group['top'].max() + group.iloc[-1]['height'],
-                'confidence': group['conf'].mean(),
+                'left': int(left),
+                'top': int(top),
+                'right': int(right),
+                'bottom': int(bottom),
+                'confidence': float(group['conf'].mean()),
                 'words': group[['text', 'left', 'top', 'width', 'height', 'conf']].to_dict('records'),
             })
 
-        # Sort by vertical position (top to bottom)
-        lines.sort(key=lambda x: x['top'])
-
-        # Merge lines that are vertically aligned
-        merged_lines = []
-        i = 0
-        while i < len(lines):
-            current_line = lines[i]
-            j = i + 1
-
-            while j < len(lines):
-                next_line = lines[j]
-                top_diff = abs(current_line['top'] - next_line['top'])
-
-                if top_diff <= vertical_threshold:
-                    # Merge the lines
-                    if next_line['left'] < current_line['left']:
-                        current_line['text'] = next_line['text'] + " " + current_line['text']
-                    else:
-                        current_line['text'] = current_line['text'] + " " + next_line['text']
-
-                    current_line['left'] = min(current_line['left'], next_line['left'])
-                    current_line['top'] = min(current_line['top'], next_line['top'])
-                    current_line['right'] = max(current_line['right'], next_line['right'])
-                    current_line['bottom'] = max(current_line['bottom'], next_line['bottom'])
-                    current_line['confidence'] = (current_line['confidence'] + next_line['confidence']) / 2
-                    current_line['words'].extend(next_line['words'])
-                    j += 1
-                else:
-                    break
-
-            merged_lines.append(current_line)
-            i = j if j > i + 1 else i + 1
-
-        return merged_lines
+        return lines
 
     @staticmethod
     def extract_line_items_with_layout(lines: List[Dict]) -> List[Dict]:
