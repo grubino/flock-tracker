@@ -206,7 +206,7 @@ export const receiptsApi = {
       },
     });
   },
-  process: (id: number, ocrEngine?: 'tesseract' | 'easyocr') => api.post<{
+  process: (id: number, ocrEngine?: 'tesseract' | 'easyocr' | 'got-ocr') => api.post<{
     status: string;
     task_id?: string;
     result?: OCRResult;
@@ -222,6 +222,13 @@ export const receiptsApi = {
     message?: string;
     error?: string;
   }>(`/api/receipts/task/${taskId}`),
+  extractExpense: (id: number) => api.post<{
+    status: 'success' | 'failed';
+    receipt_id: number;
+    expense_data?: any;
+    error?: string;
+    attempts: number;
+  }>(`/api/receipts/${id}/extract-expense`),
   delete: (id: number) => api.delete(`/api/receipts/${id}`),
 };
 

@@ -9,8 +9,11 @@ import {
   Spinner,
   Radio,
   RadioGroup,
+  MessageBar,
+  MessageBarBody,
+  MessageBarTitle,
 } from '@fluentui/react-components';
-import { ArrowUpload24Regular } from '@fluentui/react-icons';
+import { ArrowUpload24Regular, DocumentTable24Regular } from '@fluentui/react-icons';
 import { receiptsApi } from '../../services/api';
 import type { Receipt, OCRResult } from '../../types';
 
@@ -65,6 +68,33 @@ const useStyles = makeStyles({
     maxHeight: '300px',
     overflowY: 'auto',
   },
+  expenseDataSection: {
+    backgroundColor: tokens.colorNeutralBackground3,
+    padding: tokens.spacingVerticalL,
+    borderRadius: tokens.borderRadiusMedium,
+    marginTop: tokens.spacingVerticalM,
+  },
+  expenseField: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: tokens.spacingVerticalXS,
+    marginBottom: tokens.spacingVerticalM,
+  },
+  lineItemsTable: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    marginTop: tokens.spacingVerticalS,
+  },
+  tableHeader: {
+    backgroundColor: tokens.colorNeutralBackground2,
+    textAlign: 'left',
+    padding: tokens.spacingVerticalS,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  tableCell: {
+    padding: tokens.spacingVerticalS,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
 });
 
 interface ReceiptUploadProps {
@@ -79,7 +109,9 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
   const [uploadedReceipt, setUploadedReceipt] = useState<Receipt | null>(null);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr'>('tesseract');
+  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr' | 'got-ocr'>('tesseract');
+  const [llmError, setLlmError] = useState<string | null>(null);
+  const [llmAttempts, setLlmAttempts] = useState<number>(0);
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => receiptsApi.upload(file),
@@ -97,13 +129,40 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
       if (response.data.status === 'completed' && response.data.result) {
         // Synchronous processing - result ready immediately
         setOcrResult(response.data.result);
-        if (uploadedReceipt && onComplete) {
-          onComplete(uploadedReceipt, response.data.result);
-        }
       } else if (response.data.status === 'processing' && response.data.task_id) {
         // Async processing - start polling for results
         pollTaskStatus(response.data.task_id);
       }
+    },
+  });
+
+  const extractExpenseMutation = useMutation({
+    mutationFn: (receiptId: number) => receiptsApi.extractExpense(receiptId),
+    onSuccess: (response) => {
+      setLlmAttempts(response.data.attempts);
+      if (response.data.status === 'success' && response.data.expense_data) {
+        setLlmError(null);
+        if (uploadedReceipt && onComplete) {
+          const r = response.data.expense_data;
+          if (!r) {
+            setLlmError("no expenses found.")
+          } else {
+            const p: OCRResult = {
+              items: r.line_items.map((i: any) => ({amount: i.amount, description: i.description})),
+              vendor: r.vendor_name,
+              raw_text: ocrResult?.raw_text || '',
+              date: r.expense_date,
+              total: r.amount
+            };
+            onComplete(uploadedReceipt, p);
+          }
+        }
+      } else if (response.data.status === 'failed') {
+        setLlmError(response.data.error || 'Unknown error');
+      }
+    },
+    onError: (error: any) => {
+      setLlmError(error.response?.data?.detail || error.message || 'Failed to extract expense data');
     },
   });
 
@@ -196,6 +255,15 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
     setPreviewUrl(null);
     setUploadedReceipt(null);
     setOcrResult(null);
+    setLlmError(null);
+    setLlmAttempts(0);
+  };
+
+  const handleExtractExpense = () => {
+    if (uploadedReceipt) {
+      setLlmError(null);
+      extractExpenseMutation.mutate(uploadedReceipt.id);
+    }
   };
 
   const isLoading = uploadMutation.isPending || processMutation.isPending;
@@ -239,10 +307,11 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
                 </Text>
                 <RadioGroup
                   value={ocrEngine}
-                  onChange={(_, data) => setOcrEngine(data.value as 'tesseract' | 'easyocr')}
+                  onChange={(_, data) => setOcrEngine(data.value as 'tesseract' | 'easyocr' | 'got-ocr')}
                 >
                   <Radio value="tesseract" label="Tesseract (Default)" />
                   <Radio value="easyocr" label="EasyOCR (Better for challenging receipts)" />
+                  <Radio value="got-ocr" label="GOT-OCR2.0 (Best quality, format-preserving)" />
                 </RadioGroup>
               </div>
               <Button
@@ -312,6 +381,39 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
               <div className={styles.rawText}>{ocrResult.raw_text}</div>
             </div>
           </div>
+
+          {/* LLM Expense Extraction Section */}
+          <div style={{ marginTop: tokens.spacingVerticalL, display: 'flex', gap: tokens.spacingHorizontalM, alignItems: 'center' }}>
+            <Button
+              appearance="primary"
+              icon={<DocumentTable24Regular />}
+              onClick={handleExtractExpense}
+              disabled={extractExpenseMutation.isPending}
+            >
+              {extractExpenseMutation.isPending ? 'Extracting...' : 'Extract Expense Data'}
+            </Button>
+            {extractExpenseMutation.isPending && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: tokens.spacingHorizontalS }}>
+                <Spinner size="tiny" />
+                <Text size={200}>Processing with AI...</Text>
+              </div>
+            )}
+          </div>
+
+          {/* LLM Error Message */}
+          {llmError && (
+            <MessageBar intent="error" style={{ marginTop: tokens.spacingVerticalM }}>
+              <MessageBarBody>
+                <MessageBarTitle>Extraction Failed</MessageBarTitle>
+                {llmError} (Tried {llmAttempts} time{llmAttempts !== 1 ? 's' : ''})
+                <div style={{ marginTop: tokens.spacingVerticalS }}>
+                  <Button size="small" onClick={handleExtractExpense}>
+                    Retry
+                  </Button>
+                </div>
+              </MessageBarBody>
+            </MessageBar>
+          )}
 
           <Button onClick={handleReset} style={{ marginTop: tokens.spacingVerticalM }}>
             Upload Another Receipt

@@ -35,6 +35,7 @@ import CustomerDashboard from './components/customer/CustomerDashboard';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { useAuth } from './contexts/AuthContext';
 import { createQueryClient, persisterOptions } from './lib/queryPersister';
+import { useTokenRefresh } from './hooks/useTokenRefresh';
 
 const queryClient = createQueryClient();
 
@@ -51,6 +52,9 @@ export const HomePage: React.FC = () => {
 };
 
 function App() {
+  // Enable automatic token refresh
+  useTokenRefresh();
+
   return (
     <FluentProvider theme={webLightTheme}>
       <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id'}>

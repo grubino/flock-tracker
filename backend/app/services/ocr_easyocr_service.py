@@ -25,27 +25,102 @@ class OCREasyOCRService:
         if cls._reader_instance is None:
             try:
                 cls._reader_instance = easyocr.Reader(
-                    ['en'],  # English language
-                    detect_network='dbnet18',
+                    ["en"],  # English language
+                    detect_network="dbnet18",
+                    recog_network="english_g2",
                     gpu=False,  # Use CPU
-                    verbose=False
+                    verbose=False,
                 )
                 print("EasyOCR initialized successfully")
             except Exception as e:
                 print(f"Error initializing EasyOCR: {e}")
                 import traceback
+
                 traceback.print_exc()
                 raise
         return cls._reader_instance
 
     @staticmethod
-    def _group_regions_into_lines(regions: List[Dict]) -> List[List[Dict]]:
+    def _calculate_baseline_y(regions: List[Dict], x: float) -> float:
         """
-        Group text regions into lines based on vertical overlap.
-        Two regions are on the same line if their vertical ranges overlap.
+        Calculate the expected y-position on the baseline at a given x-position.
+        Uses linear interpolation between leftmost and rightmost region centers.
 
         Args:
-            regions: List of dicts with 'top', 'bottom', 'left' keys
+            regions: List of regions on the current line
+            x: The x-position to calculate baseline for
+
+        Returns:
+            Expected y-position at x
+        """
+        if len(regions) == 1:
+            # Single region, baseline is its vertical center
+            return regions[0]["top"] + regions[0]["height"] / 2
+
+        # Sort by horizontal position
+        sorted_regs = sorted(regions, key=lambda r: r["left"])
+
+        # Get leftmost and rightmost region centers
+        left_reg = sorted_regs[0]
+        right_reg = sorted_regs[-1]
+
+        left_x = left_reg["left"] + left_reg["width"] / 2
+        left_y = left_reg["top"] + left_reg["height"] / 2
+
+        right_x = right_reg["left"] + right_reg["width"] / 2
+        right_y = right_reg["top"] + right_reg["height"] / 2
+
+        # Linear interpolation
+        if abs(right_x - left_x) < 1:
+            # Nearly vertical, return average
+            return (left_y + right_y) / 2
+
+        slope = (right_y - left_y) / (right_x - left_x)
+        return left_y + slope * (x - left_x)
+
+    @staticmethod
+    def _region_fits_line(
+        region: Dict, line_regions: List[Dict], tolerance_ratio: float = 0.4
+    ) -> bool:
+        """
+        Check if a region fits on the baseline defined by existing line regions.
+
+        Args:
+            region: The region to test
+            line_regions: Regions already on the line
+            tolerance_ratio: Maximum deviation as ratio of region height
+
+        Returns:
+            True if region fits on the line
+        """
+        if not line_regions:
+            return True
+
+        # Get the center of the candidate region
+        region_center_x = region["left"] + region["width"] / 2
+        region_center_y = region["top"] + region["height"] / 2
+
+        # Calculate expected y-position on the baseline
+        expected_y = OCREasyOCRService._calculate_baseline_y(
+            line_regions, region_center_x
+        )
+
+        # Calculate tolerance based on region height
+        tolerance = region["height"] * tolerance_ratio
+
+        # Check if region center is close to the baseline
+        deviation = abs(region_center_y - expected_y)
+
+        return deviation <= tolerance
+
+    @staticmethod
+    def _group_regions_into_lines(regions: List[Dict]) -> List[List[Dict]]:
+        """
+        Group text regions into lines based on baseline fitting.
+        Handles receipts with creases or skew by fitting a line through region centers.
+
+        Args:
+            regions: List of dicts with 'top', 'bottom', 'left', 'right', 'height' keys
 
         Returns:
             List of line groups, where each group is a list of regions sorted by horizontal position
@@ -54,35 +129,26 @@ class OCREasyOCRService:
             return []
 
         # Sort regions by vertical position (top to bottom), then horizontal (left to right)
-        sorted_regions = sorted(regions, key=lambda r: (r['top'], r['left']))
+        sorted_regions = sorted(regions, key=lambda r: (r["top"], r["left"]))
 
         line_groups = []
         current_line = [sorted_regions[0]]
 
         for region in sorted_regions[1:]:
-            # Check if this region overlaps vertically with any region in the current line
-            # A region overlaps if: top1 < bottom2 AND top2 < bottom1
-            overlaps_with_current_line = False
-
-            for line_region in current_line:
-                if (region['top'] < line_region['bottom'] and
-                    line_region['top'] < region['bottom']):
-                    overlaps_with_current_line = True
-                    break
-
-            if overlaps_with_current_line:
+            # Check if this region fits on the baseline of the current line
+            if OCREasyOCRService._region_fits_line(region, current_line, 0.7):
                 # Add to current line
                 current_line.append(region)
             else:
                 # Start a new line
                 # Sort current line by horizontal position (left to right)
-                current_line.sort(key=lambda r: r['left'])
+                current_line.sort(key=lambda r: r["left"])
                 line_groups.append(current_line)
                 current_line = [region]
 
         # Don't forget the last line
         if current_line:
-            current_line.sort(key=lambda r: r['left'])
+            current_line.sort(key=lambda r: r["left"])
             line_groups.append(current_line)
 
         return line_groups
@@ -102,14 +168,16 @@ class OCREasyOCRService:
         4. Slight sharpening to enhance edges
         """
         # Convert to grayscale
-        if image.mode != 'L':
-            image = image.convert('L')
+        if image.mode != "L":
+            image = image.convert("L")
 
         # Convert PIL to OpenCV
         img_array = np.array(image)
 
         # Light denoising - preserve text details
-        img_array = cv2.fastNlMeansDenoising(img_array, None, h=5, templateWindowSize=7, searchWindowSize=21)
+        img_array = cv2.fastNlMeansDenoising(
+            img_array, None, h=5, templateWindowSize=7, searchWindowSize=21
+        )
 
         # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
         # This enhances contrast locally without over-brightening
@@ -117,9 +185,7 @@ class OCREasyOCRService:
         img_array = clahe.apply(img_array)
 
         # Slight sharpening to enhance text edges
-        kernel = np.array([[-1, -1, -1],
-                          [-1,  9, -1],
-                          [-1, -1, -1]])
+        kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
         img_array = cv2.filter2D(img_array, -1, kernel)
 
         # Ensure values are in valid range
@@ -151,7 +217,7 @@ class OCREasyOCRService:
         img_array = OCREasyOCRService.preprocess_image(image)
 
         # Save to temp file for EasyOCR
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
         temp_path = temp_file.name
 
         try:
@@ -159,7 +225,9 @@ class OCREasyOCRService:
             PILImage.fromarray(img_array).save(temp_path)
 
             # Also save for debugging with a different name
-            debug_path = image_path.replace(os.path.splitext(image_path)[1], '_easyocr_preprocessed.png')
+            debug_path = image_path.replace(
+                os.path.splitext(image_path)[1], "_easyocr_preprocessed.png"
+            )
             try:
                 PILImage.fromarray(img_array).save(debug_path)
                 print(f"Saved EasyOCR preprocessed image to: {debug_path}")
@@ -191,15 +259,18 @@ class OCREasyOCRService:
 
                     # Filter low confidence immediately
                     if conf > 30:
-                        regions.append({
-                            'text': text,
-                            'left': left,
-                            'top': top,
-                            'width': width,
-                            'height': height,
-                            'conf': conf,
-                            'bottom': top + height,
-                        })
+                        regions.append(
+                            {
+                                "text": text,
+                                "left": left,
+                                "right": left + width,
+                                "top": top,
+                                "width": width,
+                                "height": height,
+                                "conf": conf,
+                                "bottom": top + height,
+                            }
+                        )
                 except Exception as e:
                     print(f"Error processing detection {idx}: {e}")
                     continue
@@ -218,17 +289,19 @@ class OCREasyOCRService:
         rows = []
         for line_num, line_regions in enumerate(line_groups):
             for region in line_regions:
-                rows.append({
-                    'text': region['text'],
-                    'left': region['left'],
-                    'top': region['top'],
-                    'width': region['width'],
-                    'height': region['height'],
-                    'conf': region['conf'],
-                    'line_num': line_num,
-                    'block_num': 0,
-                    'par_num': 0,
-                })
+                rows.append(
+                    {
+                        "text": region["text"],
+                        "left": region["left"],
+                        "top": region["top"],
+                        "width": region["width"],
+                        "height": region["height"],
+                        "conf": region["conf"],
+                        "line_num": line_num,
+                        "block_num": 0,
+                        "par_num": 0,
+                    }
+                )
 
         df = pd.DataFrame(rows)
         return df
@@ -247,39 +320,51 @@ class OCREasyOCRService:
         if df.empty:
             return lines
 
-        required_columns = ["line_num", "text", "left", "top", "width", "height", "conf"]
+        required_columns = [
+            "line_num",
+            "text",
+            "left",
+            "top",
+            "width",
+            "height",
+            "conf",
+        ]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             print(f"Warning: EasyOCR DataFrame missing columns: {missing_columns}")
             return lines
 
         # Group by line_num (regions are already sorted left-to-right within each line)
-        for line_num, group in df.groupby('line_num', sort=True):
+        for line_num, group in df.groupby("line_num", sort=True):
             if len(group) == 0:
                 continue
 
             # Sort by left position to ensure proper left-to-right order
-            group = group.sort_values('left')
+            group = group.sort_values("left")
 
             # Combine text from all regions in this line, left to right
-            line_text = " ".join(group['text'].astype(str).tolist())
+            line_text = " ".join(group["text"].astype(str).tolist())
             line_text = OCRNLPUtils.clean_ocr_text(line_text)
 
             # Calculate the bounding box for the entire line
-            left = group['left'].min()
-            top = group['top'].min()
-            right = (group['left'] + group['width']).max()
-            bottom = (group['top'] + group['height']).max()
+            left = group["left"].min()
+            top = group["top"].min()
+            right = (group["left"] + group["width"]).max()
+            bottom = (group["top"] + group["height"]).max()
 
-            lines.append({
-                'text': line_text,
-                'left': int(left),
-                'top': int(top),
-                'right': int(right),
-                'bottom': int(bottom),
-                'confidence': float(group['conf'].mean()),
-                'words': group[['text', 'left', 'top', 'width', 'height', 'conf']].to_dict('records'),
-            })
+            lines.append(
+                {
+                    "text": line_text,
+                    "left": int(left),
+                    "top": int(top),
+                    "right": int(right),
+                    "bottom": int(bottom),
+                    "confidence": float(group["conf"].mean()),
+                    "words": group[
+                        ["text", "left", "top", "width", "height", "conf"]
+                    ].to_dict("records"),
+                }
+            )
 
         return lines
 
@@ -298,7 +383,7 @@ class OCREasyOCRService:
         ]
 
         for line in lines:
-            text = line['text'].strip()
+            text = line["text"].strip()
 
             if len(text) < 3:
                 continue
@@ -326,7 +411,7 @@ class OCREasyOCRService:
                     amount = Decimal(price_str)
 
                     if 0.50 <= amount < 10000:
-                        description = text[:price_match.start()].strip()
+                        description = text[: price_match.start()].strip()
                         description = re.sub(r"^[©®™\*\-\•\s]+", "", description)
                         description = re.sub(r"[©®™\*\-\•\s]+$", "", description)
                         description = description.strip()
@@ -344,15 +429,17 @@ class OCREasyOCRService:
                                 break
 
                         if not should_skip and description and len(description) > 2:
-                            items.append({
-                                'description': description,
-                                'amount': str(amount),
-                                'confidence': float(line['confidence']),
-                                'position': {
-                                    'top': int(line['top']),
-                                    'left': int(line['left']),
-                                },
-                            })
+                            items.append(
+                                {
+                                    "description": description,
+                                    "amount": str(amount),
+                                    "confidence": float(line["confidence"]),
+                                    "position": {
+                                        "top": int(line["top"]),
+                                        "left": int(line["left"]),
+                                    },
+                                }
+                            )
                 except:
                     continue
 
@@ -363,18 +450,20 @@ class OCREasyOCRService:
         """Get lines from top portion of receipt"""
         if not lines:
             return []
-        max_bottom = max(line['bottom'] for line in lines)
+        max_bottom = max(line["bottom"] for line in lines)
         threshold = max_bottom * top_percent
-        return [line for line in lines if line['top'] < threshold]
+        return [line for line in lines if line["top"] < threshold]
 
     @staticmethod
-    def find_footer_region(lines: List[Dict], bottom_percent: float = 0.3) -> List[Dict]:
+    def find_footer_region(
+        lines: List[Dict], bottom_percent: float = 0.3
+    ) -> List[Dict]:
         """Get lines from bottom portion of receipt"""
         if not lines:
             return []
-        max_bottom = max(line['bottom'] for line in lines)
+        max_bottom = max(line["bottom"] for line in lines)
         threshold = max_bottom * (1 - bottom_percent)
-        return [line for line in lines if line['top'] > threshold]
+        return [line for line in lines if line["top"] > threshold]
 
     @staticmethod
     def parse_receipt_with_easyocr(
@@ -406,11 +495,11 @@ class OCREasyOCRService:
         print(f"=====================")
 
         # Get full text
-        full_text = "\n".join(line['text'] for line in lines)
+        full_text = "\n".join(line["text"] for line in lines)
 
         # Find vendor in header region
         header_lines = OCREasyOCRService.find_header_region(lines)
-        header_text = "\n".join(line['text'] for line in header_lines)
+        header_text = "\n".join(line["text"] for line in header_lines)
 
         vendor = None
         if known_vendors:
@@ -421,14 +510,14 @@ class OCREasyOCRService:
                 context_lines=len(header_lines),
             )
             if match_result:
-                vendor = match_result['vendor']
+                vendor = match_result["vendor"]
 
         # Fallback: first substantial line from header
         if not vendor and header_lines:
             for line in header_lines:
-                if len(line['text']) > 3 and not re.match(r"^\d+", line['text']):
-                    if not re.search(r"\d{3}[-.\s]?\d{3}[-.\s]?\d{4}", line['text']):
-                        vendor = line['text']
+                if len(line["text"]) > 3 and not re.match(r"^\d+", line["text"]):
+                    if not re.search(r"\d{3}[-.\s]?\d{3}[-.\s]?\d{4}", line["text"]):
+                        vendor = line["text"]
                         break
 
         # Extract line items
@@ -439,11 +528,15 @@ class OCREasyOCRService:
         footer_lines = OCREasyOCRService.find_footer_region(lines)
         total = None
         for line in footer_lines:
-            if re.search(r"\btotal\b", line['text'], re.IGNORECASE):
-                price_match = re.search(r"\$?\d+[,.]?\d{0,2}", line['text'])
+            if re.search(r"\btotal\b", line["text"], re.IGNORECASE):
+                price_match = re.search(r"\$?\d+[,.]?\d{0,2}", line["text"])
                 if price_match:
                     try:
-                        total = str(Decimal(price_match.group().replace("$", "").replace(",", ".")))
+                        total = str(
+                            Decimal(
+                                price_match.group().replace("$", "").replace(",", ".")
+                            )
+                        )
                         break
                     except:
                         pass
@@ -474,7 +567,9 @@ class OCREasyOCRService:
                     continue
 
         # Calculate overall confidence
-        avg_confidence = sum(line['confidence'] for line in lines) / len(lines) if lines else 0
+        avg_confidence = (
+            sum(line["confidence"] for line in lines) / len(lines) if lines else 0
+        )
 
         return {
             "vendor": vendor,

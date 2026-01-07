@@ -107,3 +107,18 @@ async def login_for_access_token(user_credentials: UserLogin, db: Session = Depe
         data={"sub": user.email, "role": user.role.value}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_access_token(current_user: User = Depends(get_current_active_user)):
+    """Refresh the access token for the current user"""
+    logger.debug(f"Token refresh requested for user: {current_user.email}")
+
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": current_user.email, "role": current_user.role.value},
+        expires_delta=access_token_expires
+    )
+
+    logger.debug(f"New token issued for user: {current_user.email}")
+    return {"access_token": access_token, "token_type": "bearer"}

@@ -28,7 +28,7 @@ class ExpenseLineItemResponse(ExpenseLineItemBase):
 class ReceiptBrief(BaseModel):
     id: int
     filename: str
-    file_path: str
+    file_path: Optional[str] = None
 
     class Config:
         from_attributes = True

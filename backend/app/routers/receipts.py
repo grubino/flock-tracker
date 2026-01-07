@@ -19,51 +19,50 @@ logger = logging.getLogger(__name__)
 from celery import Celery
 import os
 
-REDIS_URL = os.getenv('REDIS_URL')
+REDIS_URL = os.getenv("REDIS_URL")
 CELERY_AVAILABLE = bool(REDIS_URL)
 
 if CELERY_AVAILABLE:
     # Create Celery client to send tasks (not execute them)
-    celery_app = Celery(
-        'flock_tracker_api',
-        broker=REDIS_URL,
-        backend=REDIS_URL
-    )
+    celery_app = Celery("flock_tracker_api", broker=REDIS_URL, backend=REDIS_URL)
     # Configure serialization to match worker
     celery_app.conf.update(
-        task_serializer='json',
-        accept_content=['json'],
-        result_serializer='json',
-        timezone='UTC',
+        task_serializer="json",
+        accept_content=["json"],
+        result_serializer="json",
+        timezone="UTC",
         enable_utc=True,
         result_extended=True,  # Include more metadata in results
     )
     logger.info(f"Celery client initialized with broker: {REDIS_URL[:20]}...")
 else:
     celery_app = None
-    logger.warning("REDIS_URL not set - Celery unavailable, will use synchronous processing")
+    logger.warning(
+        "REDIS_URL not set - Celery unavailable, will use synchronous processing"
+    )
     # Import services for fallback
     from app.services.ocr_service import OCRService
     from app.services.ocr_layout_service import OCRLayoutService
     from app.services.ocr_easyocr_service import OCREasyOCRService
+    from app.services.ocr_got_service import OCRGOTService
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
 # Configure upload directory
 # Use /data/uploads for Render Disk or uploads/receipts for local dev
-UPLOAD_DIR = Path(os.getenv('UPLOAD_DIR', 'uploads/receipts'))
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", "uploads/receipts"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowed file types
-ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.pdf'}
-ALLOWED_MIME_TYPES = {'image/jpeg', 'image/png', 'application/pdf'}
+ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
+ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "application/pdf"}
 
 
 @router.post("/upload", response_model=ReceiptResponse)
 async def upload_receipt(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Upload a receipt image or PDF for OCR processing"""
 
@@ -72,13 +71,13 @@ async def upload_receipt(
     if file_ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+            detail=f"File type not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}",
         )
 
     if file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"MIME type not allowed. Allowed types: {', '.join(ALLOWED_MIME_TYPES)}"
+            detail=f"MIME type not allowed. Allowed types: {', '.join(ALLOWED_MIME_TYPES)}",
         )
 
     # Read file data into memory
@@ -90,7 +89,7 @@ async def upload_receipt(
         logger.error(f"Error reading file {file.filename}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error reading file: {str(e)}"
+            detail=f"Error reading file: {str(e)}",
         )
 
     # Create receipt record with file data in database
@@ -98,13 +97,15 @@ async def upload_receipt(
         filename=file.filename,
         file_path=None,  # No longer using filesystem
         file_type=file.content_type,
-        file_data=file_data
+        file_data=file_data,
     )
     db.add(receipt)
     db.commit()
     db.refresh(receipt)
 
-    logger.info(f"Receipt saved to database: ID={receipt.id}, filename={receipt.filename}")
+    logger.info(
+        f"Receipt saved to database: ID={receipt.id}, filename={receipt.filename}"
+    )
 
     return receipt
 
@@ -113,10 +114,7 @@ async def upload_receipt(
 async def celery_status(current_user: User = Depends(get_current_active_user)):
     """Check if Celery is available and connected"""
     if not CELERY_AVAILABLE:
-        return {
-            "available": False,
-            "message": "REDIS_URL not configured"
-        }
+        return {"available": False, "message": "REDIS_URL not configured"}
 
     try:
         # Try to inspect workers
@@ -127,35 +125,35 @@ async def celery_status(current_user: User = Depends(get_current_active_user)):
             return {
                 "available": True,
                 "workers_online": len(stats),
-                "workers": list(stats.keys())
+                "workers": list(stats.keys()),
             }
         else:
             return {
                 "available": True,
                 "workers_online": 0,
-                "message": "No workers are currently running"
+                "message": "No workers are currently running",
             }
     except Exception as e:
         return {
             "available": True,
             "error": str(e),
-            "message": "Celery client initialized but cannot connect to broker/workers"
+            "message": "Celery client initialized but cannot connect to broker/workers",
         }
 
 
 @router.post("/{receipt_id}/process")
 async def process_receipt(
     receipt_id: int,
-    ocr_engine: str = "tesseract",  # Options: "tesseract" or "easyocr"
+    ocr_engine: str = "tesseract",  # Options: "tesseract", "easyocr", or "got-ocr"
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     Process a receipt with OCR and extract structured data (async with Celery)
 
     Args:
         receipt_id: ID of the receipt to process
-        ocr_engine: OCR engine to use - "tesseract" (default) or "easyocr"
+        ocr_engine: OCR engine to use - "tesseract" (default), "easyocr", or "got-ocr"
     """
 
     receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
@@ -164,32 +162,30 @@ async def process_receipt(
 
     # Check if already processed
     if receipt.raw_text:
-        result = {'raw_text': receipt.raw_text}
+        result = {"raw_text": receipt.raw_text}
         if receipt.extracted_data:
             result.update(receipt.extracted_data)
-        return {
-            'status': 'completed',
-            'task_id': None,
-            'result': result
-        }
+        return {"status": "completed", "task_id": None, "result": result}
 
     # Validate OCR engine
-    if ocr_engine not in ["tesseract", "easyocr"]:
+    if ocr_engine not in ["tesseract", "easyocr", "got-ocr"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid OCR engine. Choose 'tesseract' or 'easyocr'"
+            detail="Invalid OCR engine. Choose 'tesseract', 'easyocr', or 'got-ocr'",
         )
 
     try:
         if CELERY_AVAILABLE:
             # Queue OCR processing task by name (worker will handle it)
             # TODO: Update worker to support ocr_engine parameter
-            task = celery_app.send_task('workers.tasks.process_receipt_ocr', args=[receipt_id, ocr_engine])
+            task = celery_app.send_task(
+                "workers.tasks.process_receipt_ocr", args=[receipt_id, ocr_engine]
+            )
             return {
-                'status': 'processing',
-                'task_id': task.id,
-                'message': f'OCR processing started with {ocr_engine}',
-                'ocr_engine': ocr_engine
+                "status": "processing",
+                "task_id": task.id,
+                "message": f"OCR processing started with {ocr_engine}",
+                "ocr_engine": ocr_engine,
             }
         else:
             # Fallback to synchronous processing
@@ -199,12 +195,14 @@ async def process_receipt(
             if not receipt.file_data:
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Receipt has no file data"
+                    detail="Receipt has no file data",
                 )
 
             # Create temp file
-            file_ext = receipt.filename.split('.')[-1] if '.' in receipt.filename else 'jpg'
-            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_ext}')
+            file_ext = (
+                receipt.filename.split(".")[-1] if "." in receipt.filename else "jpg"
+            )
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}")
             temp_file.write(receipt.file_data)
             temp_file.close()
             temp_path = temp_file.name
@@ -217,21 +215,31 @@ async def process_receipt(
                 if ocr_engine == "easyocr":
                     logger.info(f"Using EasyOCR for receipt {receipt_id}")
                     extracted_data = OCREasyOCRService.parse_receipt_with_easyocr(
-                        temp_path,
-                        receipt.file_type,
-                        known_vendor_names
+                        temp_path, receipt.file_type, known_vendor_names
                     )
                     # EasyOCR doesn't return separate raw_text, construct it from lines
-                    raw_text = "\n".join([item['description'] for item in extracted_data.get('items', [])])
+                    raw_text = "\n".join(
+                        [
+                            item["description"]
+                            for item in extracted_data.get("items", [])
+                        ]
+                    )
+                elif ocr_engine == "got-ocr":
+                    logger.info(f"Using GOT-OCR2_0 for receipt {receipt_id}")
+                    extracted_data = OCRGOTService.parse_receipt_with_got_ocr(
+                        temp_path,
+                        receipt.file_type,
+                        known_vendor_names,
+                        ocr_type="format",
+                    )
+                    raw_text = extracted_data.get("raw_text", "")
                 else:  # tesseract (default)
                     logger.info(f"Using Tesseract for receipt {receipt_id}")
                     raw_text = OCRService.extract_text(temp_path, receipt.file_type)
                     extracted_data = OCRLayoutService.parse_receipt_with_layout(
-                        temp_path,
-                        receipt.file_type,
-                        known_vendor_names
+                        temp_path, receipt.file_type, known_vendor_names
                     )
-                    extracted_data['ocr_engine'] = 'tesseract'
+                    extracted_data["ocr_engine"] = "tesseract"
 
                 receipt.raw_text = raw_text
                 receipt.extracted_data = extracted_data
@@ -243,33 +251,32 @@ async def process_receipt(
                 except:
                     pass
 
-            result = {'raw_text': raw_text}
+            result = {"raw_text": raw_text}
             result.update(extracted_data)
             return {
-                'status': 'completed',
-                'task_id': None,
-                'result': result,
-                'ocr_engine': ocr_engine
+                "status": "completed",
+                "task_id": None,
+                "result": result,
+                "ocr_engine": ocr_engine,
             }
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing receipt: {str(e)}"
+            detail=f"Error processing receipt: {str(e)}",
         )
 
 
 @router.get("/task/{task_id}")
 async def get_task_status(
-    task_id: str,
-    current_user: User = Depends(get_current_active_user)
+    task_id: str, current_user: User = Depends(get_current_active_user)
 ):
     """Check the status of an OCR processing task"""
 
     if not CELERY_AVAILABLE:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Celery not available"
+            detail="Celery not available",
         )
 
     from celery.result import AsyncResult
@@ -277,48 +284,41 @@ async def get_task_status(
     try:
         task = AsyncResult(task_id, app=celery_app)
 
-        if task.state == 'PENDING':
+        if task.state == "PENDING":
             return {
-                'status': 'pending',
-                'task_id': task_id,
-                'message': 'Task is waiting to be processed'
+                "status": "pending",
+                "task_id": task_id,
+                "message": "Task is waiting to be processed",
             }
-        elif task.state == 'PROCESSING':
+        elif task.state == "PROCESSING":
             return {
-                'status': 'processing',
-                'task_id': task_id,
-                'message': task.info.get('status', 'Processing...') if task.info else 'Processing...'
+                "status": "processing",
+                "task_id": task_id,
+                "message": (
+                    task.info.get("status", "Processing...")
+                    if task.info
+                    else "Processing..."
+                ),
             }
-        elif task.state == 'SUCCESS':
-            return {
-                'status': 'completed',
-                'task_id': task_id,
-                'result': task.result
-            }
-        elif task.state == 'FAILURE':
+        elif task.state == "SUCCESS":
+            return {"status": "completed", "task_id": task_id, "result": task.result}
+        elif task.state == "FAILURE":
             # Handle failure with better error extraction
-            error_msg = 'Unknown error'
+            error_msg = "Unknown error"
             if task.info:
                 if isinstance(task.info, dict):
-                    error_msg = task.info.get('error', str(task.info))
+                    error_msg = task.info.get("error", str(task.info))
                 else:
                     error_msg = str(task.info)
 
-            return {
-                'status': 'failed',
-                'task_id': task_id,
-                'error': error_msg
-            }
+            return {"status": "failed", "task_id": task_id, "error": error_msg}
         else:
-            return {
-                'status': task.state.lower(),
-                'task_id': task_id
-            }
+            return {"status": task.state.lower(), "task_id": task_id}
     except Exception as e:
         # Catch serialization errors and other issues
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error retrieving task status: {str(e)}"
+            detail=f"Error retrieving task status: {str(e)}",
         )
 
 
@@ -327,7 +327,7 @@ def get_receipts(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Get all receipts"""
     receipts = db.query(Receipt).offset(skip).limit(limit).all()
@@ -338,7 +338,7 @@ def get_receipts(
 def get_receipt(
     receipt_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Get a specific receipt"""
     receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
@@ -351,7 +351,7 @@ def get_receipt(
 def delete_receipt(
     receipt_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """Delete a receipt and its file"""
     receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
@@ -370,3 +370,58 @@ def delete_receipt(
     db.commit()
     logger.info(f"Receipt deleted: ID={receipt_id}")
     return {"message": "Receipt deleted successfully"}
+
+
+@router.post("/{receipt_id}/extract-expense")
+async def extract_expense_data(
+    receipt_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Extract structured expense data from receipt OCR text using local LLM
+
+    Args:
+        receipt_id: ID of the receipt to extract from
+    """
+    from app.services.llm_expense_extractor import LLMExpenseExtractor
+
+    receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    # Check if receipt has been processed with OCR
+    if not receipt.raw_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Receipt has not been processed with OCR yet. Process it first using /receipts/{receipt_id}/process",
+        )
+
+    # Get LLM URL from environment variable
+    llm_url = os.getenv("LLM_URL", "http://localhost:8080/completion")
+
+    # Use retry wrapper for robust extraction
+    result = await LLMExpenseExtractor.extract_expense_data_with_retry(
+        ocr_text=receipt.raw_text, llm_url=llm_url, timeout=120, max_retries=3
+    )
+
+    if result["success"]:
+        logger.info(
+            f"LLM extracted expense data for receipt {receipt_id} in {result['attempts']} attempt(s)"
+        )
+        return {
+            "status": "success",
+            "receipt_id": receipt_id,
+            "expense_data": result["data"],
+            "attempts": result["attempts"],
+        }
+    else:
+        logger.error(
+            f"LLM extraction failed for receipt {receipt_id} after {result['attempts']} attempts: {result['error']}"
+        )
+        return {
+            "status": "failed",
+            "receipt_id": receipt_id,
+            "error": result["error"],
+            "attempts": result["attempts"],
+        }

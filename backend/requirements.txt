@@ -22,3 +22,9 @@ httpx<0.25.0
 easyocr==1.7.1  # Updated for Pillow 10+ compatibility
 pymupdf>=1.23.0  # Install newer version with wheels
 numpy
+transformers>=4.37.0  # For GOT-OCR2_0 model
+torch>=2.0.0  # PyTorch for GOT-OCR2_0
+safetensors>=0.3.0  # For safe model loading
+tiktoken
+verovio
+accelerate
