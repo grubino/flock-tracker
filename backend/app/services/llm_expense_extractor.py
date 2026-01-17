@@ -9,7 +9,9 @@ import asyncio
 from typing import Dict, List, Optional
 from decimal import Decimal
 from datetime import datetime
-import httpx
+from openai import AsyncOpenAI, APIConnectionError, APITimeoutError, APIStatusError
+
+from generated.models import ExpenseCategory
 
 logger = logging.getLogger(__name__)
 
@@ -20,16 +22,16 @@ class LLMExpenseExtractor:
     @staticmethod
     async def extract_expense_data_with_retry(
         ocr_text: str,
-        llm_url: str = "http://localhost:8080/completion",
+        llm_url: str = "http://localhost:8080/v1",
         timeout: int = 30,
-        max_retries: int = 3
+        max_retries: int = 3,
     ) -> Dict:
         """
         Extract structured expense data from OCR text using local LLM with retry logic
 
         Args:
             ocr_text: Raw OCR text from receipt
-            llm_url: URL of the llama.cpp server completion endpoint
+            llm_url: Base URL of the llama.cpp server (OpenAI-compatible API)
             timeout: Request timeout in seconds
             max_retries: Maximum number of retry attempts
 
@@ -50,9 +52,7 @@ class LLMExpenseExtractor:
 
                 # Call the main extraction method
                 data = await LLMExpenseExtractor.extract_expense_data(
-                    ocr_text=ocr_text,
-                    llm_url=llm_url,
-                    timeout=timeout
+                    ocr_text=ocr_text, llm_url=llm_url, timeout=timeout
                 )
 
                 # Success!
@@ -61,19 +61,19 @@ class LLMExpenseExtractor:
                     "success": True,
                     "data": data,
                     "error": None,
-                    "attempts": attempt
+                    "attempts": attempt,
                 }
 
-            except httpx.TimeoutException as e:
+            except APITimeoutError as e:
                 last_error = f"LLM request timed out after {timeout}s"
                 logger.warning(f"Attempt {attempt} failed: {last_error}")
 
-            except httpx.ConnectError as e:
+            except APIConnectionError as e:
                 last_error = f"Could not connect to LLM server at {llm_url}"
                 logger.warning(f"Attempt {attempt} failed: {last_error}")
 
-            except httpx.HTTPError as e:
-                last_error = f"LLM HTTP error: {str(e)}"
+            except APIStatusError as e:
+                last_error = f"LLM API error: {str(e)}"
                 logger.warning(f"Attempt {attempt} failed: {last_error}")
 
             except ValueError as e:
@@ -92,26 +92,28 @@ class LLMExpenseExtractor:
                 await asyncio.sleep(wait_time)
 
         # All attempts failed
-        logger.error(f"LLM extraction failed after {max_retries} attempts: {last_error}")
+        logger.error(
+            f"LLM extraction failed after {max_retries} attempts: {last_error}"
+        )
         return {
             "success": False,
             "data": None,
             "error": last_error,
-            "attempts": max_retries
+            "attempts": max_retries,
         }
 
     @staticmethod
     async def extract_expense_data(
         ocr_text: str,
-        llm_url: str = "http://localhost:8080/completion",
-        timeout: int = 30
+        llm_url: str = "http://localhost:8080/v1",
+        timeout: int = 30,
     ) -> Dict:
         """
         Extract structured expense data from OCR text using local LLM
 
         Args:
             ocr_text: Raw OCR text from receipt
-            llm_url: URL of the llama.cpp server completion endpoint
+            llm_url: Base URL of the llama.cpp server (OpenAI-compatible API)
             timeout: Request timeout in seconds
 
         Returns:
@@ -137,23 +139,26 @@ class LLMExpenseExtractor:
         # Build the prompt
         prompt = LLMExpenseExtractor._build_extraction_prompt(ocr_text)
 
-        # Call the LLM
+        # Create OpenAI client pointing to local llama.cpp server
+        client = AsyncOpenAI(
+            base_url=llm_url,
+            api_key="not-needed",  # llama.cpp doesn't require an API key
+            timeout=timeout,
+        )
+
         try:
-            async with httpx.AsyncClient(timeout=timeout) as client:
-                response = await client.post(
-                    llm_url,
-                    json={
-                        "prompt": prompt,
-                        "temperature": 0.1,  # Low temperature for consistent extraction
-                        "max_tokens": 2048,
-                        "stop": ["</json>", "```"],
-                    }
-                )
-                response.raise_for_status()
-                result = response.json()
+            response = await client.chat.completions.create(
+                model="local-model",  # llama.cpp ignores this, uses loaded model
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,  # Low temperature for consistent extraction
+                max_tokens=2048,
+                stop=["</json>", "```"],
+            )
 
             # Extract the completion text
-            completion_text = result.get("content", "")
+            completion_text = response.choices[0].message.content or ""
             logger.debug(f"LLM raw response: {completion_text}")
 
             # Parse the JSON from the completion
@@ -161,15 +166,18 @@ class LLMExpenseExtractor:
 
             return expense_data
 
-        except httpx.TimeoutException:
+        except APITimeoutError:
             logger.error(f"LLM request timed out after {timeout}s")
-            raise Exception(f"LLM request timed out after {timeout}s")
-        except httpx.HTTPError as e:
-            logger.error(f"LLM HTTP error: {str(e)}")
-            raise Exception(f"LLM HTTP error: {str(e)}")
+            raise
+        except APIConnectionError as e:
+            logger.error(f"Could not connect to LLM server: {str(e)}")
+            raise
+        except APIStatusError as e:
+            logger.error(f"LLM API error: {str(e)}")
+            raise
         except Exception as e:
             logger.error(f"Error extracting expense data with LLM: {str(e)}")
-            raise Exception(f"LLM extraction failed: {str(e)}")
+            raise
 
     @staticmethod
     def _build_extraction_prompt(ocr_text: str) -> str:
@@ -177,32 +185,21 @@ class LLMExpenseExtractor:
 
         # Get current date for context
         today = datetime.now().strftime("%Y-%m-%d")
-
+        categories = "\n".join((f"  - {n.value}" for n in ExpenseCategory))
         prompt = f"""You are an AI assistant that extracts structured expense data from receipt text.
 
 Today's date is {today}.
 
 Available expense categories:
-- feed
-- seed
-- medication
-- veterinary
-- infrastructure
-- equipment
-- supplies
-- utilities
-- labor
-- maintenance
-- other
+{categories}
 
 Extract the following information from the receipt text below:
-1. Vendor name
+1. Vendor name ("Unknown" if unclear from context)
 2. Expense date (YYYY-MM-DD format, use today's date if not found)
 3. Total amount
-4. Main expense category (choose the most appropriate from the list above)
-5. Brief description (vendor name + main items)
-6. Line items with description, quantity, unit_price, and amount
-7. Any relevant notes
+4. Brief description (vendor name + main items)
+5. Line items with description, quantity (1 if unspecified), unit_price, category (default: "other"), and amount
+6. Any relevant notes
 
 Receipt text:
 {ocr_text}
@@ -212,13 +209,12 @@ Return ONLY a valid JSON object (no markdown, no explanation) with this structur
   "vendor_name": "string",
   "expense_date": "YYYY-MM-DD",
   "amount": 0.00,
-  "category": "one of the categories above",
   "description": "brief description",
   "notes": "any relevant notes or observations",
   "line_items": [
     {{
       "description": "item description",
-      "category": "optional category if different from main",
+      "category": "selected from the given list",
       "quantity": 0.00,
       "unit_price": 0.00,
       "amount": 0.00
@@ -285,19 +281,30 @@ JSON:"""
         """
         # Define valid categories
         valid_categories = {
-            "feed", "seed", "medication", "veterinary", "infrastructure",
-            "equipment", "supplies", "utilities", "labor", "maintenance", "other"
+            "feed",
+            "seed",
+            "medication",
+            "veterinary",
+            "infrastructure",
+            "equipment",
+            "supplies",
+            "utilities",
+            "labor",
+            "maintenance",
+            "other",
         }
 
         # Ensure required fields exist
         cleaned = {
             "vendor_name": data.get("vendor_name", "Unknown Vendor"),
-            "expense_date": data.get("expense_date", datetime.now().strftime("%Y-%m-%d")),
+            "expense_date": data.get(
+                "expense_date", datetime.now().strftime("%Y-%m-%d")
+            ),
             "amount": float(data.get("amount", 0)),
             "category": data.get("category", "other"),
             "description": data.get("description", ""),
             "notes": data.get("notes", ""),
-            "line_items": []
+            "line_items": [],
         }
 
         # Validate category
@@ -309,7 +316,7 @@ JSON:"""
         for item in data.get("line_items", []):
             line_item = {
                 "description": item.get("description", ""),
-                "amount": float(item.get("amount", 0))
+                "amount": float(item.get("amount", 0)),
             }
 
             # Optional fields

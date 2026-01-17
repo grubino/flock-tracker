@@ -109,7 +109,7 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
   const [uploadedReceipt, setUploadedReceipt] = useState<Receipt | null>(null);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr' | 'got-ocr'>('tesseract');
+  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr'>('got-ocr');
   const [llmError, setLlmError] = useState<string | null>(null);
   const [llmAttempts, setLlmAttempts] = useState<number>(0);
 
@@ -148,7 +148,7 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
             setLlmError("no expenses found.")
           } else {
             const p: OCRResult = {
-              items: r.line_items.map((i: any) => ({amount: i.amount, description: i.description})),
+              items: r.line_items.map((i: any) => ({amount: i.amount, category: i.category, description: i.description})),
               vendor: r.vendor_name,
               raw_text: ocrResult?.raw_text || '',
               date: r.expense_date,
@@ -307,11 +307,13 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
                 </Text>
                 <RadioGroup
                   value={ocrEngine}
-                  onChange={(_, data) => setOcrEngine(data.value as 'tesseract' | 'easyocr' | 'got-ocr')}
+                  onChange={(_, data) => setOcrEngine(data.value as 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr')}
                 >
-                  <Radio value="tesseract" label="Tesseract (Default)" />
-                  <Radio value="easyocr" label="EasyOCR (Better for challenging receipts)" />
-                  <Radio value="got-ocr" label="GOT-OCR2.0 (Best quality, format-preserving)" />
+                  <Radio value="tesseract" label="Tesseract" />
+                  <Radio value="easyocr" label="EasyOCR" />
+                  <Radio value="got-ocr" label="GOT-OCR2.0 (Default)" />
+                  <Radio value="chandra" label="Chandra OCR" />
+                  <Radio value="paddleocr" label="PaddleOCR" />
                 </RadioGroup>
               </div>
               <Button

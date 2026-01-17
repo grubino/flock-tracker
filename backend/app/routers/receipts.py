@@ -9,17 +9,30 @@ import logging
 from app.database.database import get_db
 from app.models.receipt import Receipt
 from app.models.vendor import Vendor
-from app.schemas.receipt import ReceiptResponse, OCRResult
+from app.models.batch_receipt import (
+    BatchReceiptUpload,
+    BatchReceiptItem,
+    BatchStatus,
+    BatchItemStatus,
+)
+from app.schemas.receipt import (
+    ReceiptResponse,
+    OCRResult,
+    BatchReceiptUploadResponse,
+    BatchReceiptStatusResponse,
+)
 from app.routers.auth import get_current_active_user
 from app.models.user import User
+import uuid
 
 logger = logging.getLogger(__name__)
 
 # Initialize Celery client (don't import worker tasks)
 from celery import Celery
 import os
+from app.config import settings
 
-REDIS_URL = os.getenv("REDIS_URL")
+REDIS_URL = settings.redis_url
 CELERY_AVAILABLE = bool(REDIS_URL)
 
 if CELERY_AVAILABLE:
@@ -45,6 +58,8 @@ else:
     from app.services.ocr_layout_service import OCRLayoutService
     from app.services.ocr_easyocr_service import OCREasyOCRService
     from app.services.ocr_got_service import OCRGOTService
+    from app.services.ocr_chandra_service import OCRChandraService
+    from app.services.ocr_paddle_service import OCRPaddleService
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
@@ -110,6 +125,135 @@ async def upload_receipt(
     return receipt
 
 
+@router.post("/batch-upload", response_model=BatchReceiptUploadResponse)
+async def batch_upload_receipts(
+    files: List[UploadFile] = File(...),
+    ocr_engine: str = "tesseract",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Upload multiple receipts for batch processing
+
+    Args:
+        files: List of receipt files to upload
+        ocr_engine: OCR engine to use for all receipts ("tesseract", "easyocr", or "got-ocr")
+
+    Returns:
+        Batch upload metadata with batch_id for tracking progress
+    """
+
+    # Validate OCR engine
+    if ocr_engine not in ["tesseract", "easyocr", "got-ocr", "chandra", "paddleocr"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OCR engine. Choose 'tesseract', 'easyocr', 'got-ocr', 'chandra', or 'paddleocr'",
+        )
+
+    # Validate at least one file
+    if not files:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files provided",
+        )
+
+    # Validate all files before processing
+    for file in files:
+        file_ext = os.path.splitext(file.filename)[1].lower()
+        if file_ext not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"File type not allowed for '{file.filename}'. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}",
+            )
+
+        if file.content_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"MIME type not allowed for '{file.filename}'. Allowed types: {', '.join(ALLOWED_MIME_TYPES)}",
+            )
+
+    # Generate unique batch ID
+    batch_id = str(uuid.uuid4())
+
+    try:
+        # Create batch record
+        batch = BatchReceiptUpload(
+            batch_id=batch_id,
+            user_id=current_user.id,
+            total_count=len(files),
+            ocr_engine=ocr_engine,
+            status=BatchStatus.PENDING,
+        )
+        db.add(batch)
+        db.flush()  # Get batch.id
+
+        # Process each file and create receipt + batch item records
+        for file in files:
+            # Read file data
+            try:
+                file_data = await file.read()
+                file_size = len(file_data)
+                logger.info(
+                    f"Batch file uploaded: {file.filename} (size: {file_size} bytes)"
+                )
+            except Exception as e:
+                logger.error(f"Error reading batch file {file.filename}: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Error reading file '{file.filename}': {str(e)}",
+                )
+
+            # Create receipt record
+            receipt = Receipt(
+                filename=file.filename,
+                file_path=None,
+                file_type=file.content_type,
+                file_data=file_data,
+            )
+            db.add(receipt)
+            db.flush()  # Get receipt.id
+
+            # Create batch item record
+            batch_item = BatchReceiptItem(
+                batch_upload_id=batch.id,
+                receipt_id=receipt.id,
+                filename=file.filename,
+                status=BatchItemStatus.PENDING,
+            )
+            db.add(batch_item)
+
+        db.commit()
+        db.refresh(batch)
+
+        logger.info(
+            f"Batch upload created: batch_id={batch_id}, total_count={len(files)}, ocr_engine={ocr_engine}"
+        )
+
+        # Queue Celery task for background processing
+        if CELERY_AVAILABLE:
+            task = celery_app.send_task(
+                "workers.tasks.process_batch_receipts", args=[batch_id]
+            )
+            logger.info(
+                f"Queued batch processing task: task_id={task.id}, batch_id={batch_id}"
+            )
+        else:
+            logger.warning(
+                f"Celery not available - batch {batch_id} will not be processed automatically"
+            )
+            # TODO: Consider implementing synchronous fallback or returning error
+
+        return batch
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating batch upload: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creating batch upload: {str(e)}",
+        )
+
+
 @router.get("/celery-status")
 async def celery_status(current_user: User = Depends(get_current_active_user)):
     """Check if Celery is available and connected"""
@@ -168,10 +312,10 @@ async def process_receipt(
         return {"status": "completed", "task_id": None, "result": result}
 
     # Validate OCR engine
-    if ocr_engine not in ["tesseract", "easyocr", "got-ocr"]:
+    if ocr_engine not in ["tesseract", "easyocr", "got-ocr", "chandra", "paddleocr"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid OCR engine. Choose 'tesseract', 'easyocr', or 'got-ocr'",
+            detail="Invalid OCR engine. Choose 'tesseract', 'easyocr', 'got-ocr', 'chandra', or 'paddleocr'",
         )
 
     try:
@@ -231,6 +375,23 @@ async def process_receipt(
                         receipt.file_type,
                         known_vendor_names,
                         ocr_type="format",
+                    )
+                    raw_text = extracted_data.get("raw_text", "")
+                elif ocr_engine == "chandra":
+                    logger.info(f"Using Chandra OCR for receipt {receipt_id}")
+                    extracted_data = OCRChandraService.parse_receipt_with_chandra(
+                        temp_path,
+                        receipt.file_type,
+                        known_vendor_names,
+                        output_format="markdown",
+                    )
+                    raw_text = extracted_data.get("raw_text", "")
+                elif ocr_engine == "paddleocr":
+                    logger.info(f"Using PaddleOCR for receipt {receipt_id}")
+                    extracted_data = OCRPaddleService.parse_receipt_with_paddle(
+                        temp_path,
+                        receipt.file_type,
+                        known_vendor_names,
                     )
                     raw_text = extracted_data.get("raw_text", "")
                 else:  # tesseract (default)
@@ -425,3 +586,74 @@ async def extract_expense_data(
             "error": result["error"],
             "attempts": result["attempts"],
         }
+
+
+@router.get("/batch/{batch_id}", response_model=BatchReceiptStatusResponse)
+def get_batch_status(
+    batch_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get the status of a batch receipt upload
+
+    Args:
+        batch_id: UUID of the batch to check
+
+    Returns:
+        Batch metadata with list of all items and their statuses
+    """
+    batch = (
+        db.query(BatchReceiptUpload)
+        .filter(BatchReceiptUpload.batch_id == batch_id)
+        .first()
+    )
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    # Check authorization - only the user who created the batch can view it
+    if batch.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this batch")
+
+    return batch
+
+
+@router.get("/batch/{batch_id}/expenses")
+def get_batch_expenses(
+    batch_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Get all expenses created by a batch upload
+
+    Args:
+        batch_id: UUID of the batch
+
+    Returns:
+        List of expense records created by this batch
+    """
+    from app.models.expense import Expense
+    from app.schemas.expense import ExpenseResponse
+
+    batch = (
+        db.query(BatchReceiptUpload)
+        .filter(BatchReceiptUpload.batch_id == batch_id)
+        .first()
+    )
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    # Check authorization
+    if batch.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this batch")
+
+    # Get all expenses from this batch's items
+    expenses = (
+        db.query(Expense)
+        .join(BatchReceiptItem, BatchReceiptItem.expense_id == Expense.id)
+        .filter(BatchReceiptItem.batch_upload_id == batch.id)
+        .all()
+    )
+
+    return expenses

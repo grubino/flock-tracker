@@ -30,6 +30,7 @@ class User(Base):
     # Relationships
     products = relationship("Product", back_populates="created_by")
     orders = relationship("Order", back_populates="customer")
+    batch_receipts = relationship("BatchReceiptUpload", back_populates="user")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', name='{self.name}')>"

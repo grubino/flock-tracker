@@ -10,6 +10,14 @@ Celery workers for async task processing, primarily for OCR receipt processing.
 pip install -r backend/requirements.txt
 ```
 
+The backend also depends on a `llama.cpp` server which can be started like so:
+
+```bash
+$ pushd ../llama.cpp && ./bin/llama-server -m models/Phi-3-mini-4k-instruct-q4.gguf --host 0.0.0.0 --port 8080 -c 8192 & popd
+```
+
+You must also set `LLM_URL` appropriately in the environment.  For this example, it would be `LLM_URL=http://localhost:8080/completion` which is the default value.
+
 ### 2. Install Tesseract OCR
 
 **Ubuntu/Debian:**

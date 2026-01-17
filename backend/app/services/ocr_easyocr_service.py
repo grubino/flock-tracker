@@ -11,6 +11,10 @@ import numpy as np
 import cv2
 from .ocr_nlp_utils import OCRNLPUtils
 import tempfile
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class OCREasyOCRService:
@@ -27,16 +31,13 @@ class OCREasyOCRService:
                 cls._reader_instance = easyocr.Reader(
                     ["en"],  # English language
                     detect_network="dbnet18",
-                    recog_network="english_g2",
+                    recog_network="custom_model",
                     gpu=False,  # Use CPU
                     verbose=False,
                 )
-                print("EasyOCR initialized successfully")
+                logger.info("EasyOCR initialized successfully")
             except Exception as e:
-                print(f"Error initializing EasyOCR: {e}")
-                import traceback
-
-                traceback.print_exc()
+                logger.error(f"Error initializing EasyOCR: {e}", exc_info=True)
                 raise
         return cls._reader_instance
 
@@ -230,14 +231,18 @@ class OCREasyOCRService:
             )
             try:
                 PILImage.fromarray(img_array).save(debug_path)
-                print(f"Saved EasyOCR preprocessed image to: {debug_path}")
+                logger.debug(f"Saved EasyOCR preprocessed image to: {debug_path}")
             except:
                 pass
 
             # Run EasyOCR - returns list of (bbox, text, confidence)
-            print(f"Running EasyOCR on: {temp_path}")
+            logger.info(
+                f"EasyOCR: Starting readtext on {temp_path} (this may take several minutes on CPU)"
+            )
             result = reader.readtext(temp_path)
-            print(f"EasyOCR detected {len(result)} text regions")
+            logger.info(
+                f"EasyOCR: Completed readtext, detected {len(result)} text regions"
+            )
 
             # Convert EasyOCR result to list of regions
             regions = []

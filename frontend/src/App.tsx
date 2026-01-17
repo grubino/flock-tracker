@@ -19,6 +19,7 @@ import EventForm from './components/events/EventForm';
 import EventCSVImport from './components/events/EventCSVImport';
 import ExpenseList from './components/expenses/ExpenseList';
 import ExpenseForm from './components/expenses/ExpenseForm';
+import BatchReceiptUpload from './components/receipts/BatchReceiptUpload';
 import VendorList from './components/vendors/VendorList';
 import VendorForm from './components/vendors/VendorForm';
 import LocationList from './components/locations/LocationList';
@@ -174,6 +175,15 @@ function App() {
                       <RoleGuard minRole="user">
                         <Layout>
                           <ExpenseForm isEdit />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/receipts/batch-upload" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <BatchReceiptUpload />
                         </Layout>
                       </RoleGuard>
                     </ProtectedRoute>

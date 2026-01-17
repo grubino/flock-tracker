@@ -290,11 +290,41 @@ export interface OCRExtractedData {
   date?: string;
 }
 
+export interface BatchReceiptItem {
+  id: number;
+  filename: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  error_message?: string;
+  expense_id?: number;
+  receipt_id?: number;
+  ocr_attempts: number;
+  llm_attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BatchReceiptUpload {
+  batch_id: string;
+  total_count: number;
+  processed_count: number;
+  success_count: number;
+  error_count: number;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  ocr_engine: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BatchReceiptStatus extends BatchReceiptUpload {
+  items: BatchReceiptItem[];
+}
+
 export interface OCRResult {
   raw_text: string;
   vendor?: string;
   items: Array<{
     description: string;
+    category?: ExpenseCategory;
     amount: string;
   }>;
   total?: string;

@@ -14,6 +14,7 @@ from transformers import AutoModelForImageTextToText, AutoProcessor
 import torch
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 class OCRGOTService:
@@ -60,9 +61,14 @@ class OCRGOTService:
         try:
             # Run GOT-OCR2_0 inference
             # The model's chat method expects the image path as a string
+            logger.info(f"GOT-OCR: Processing image {image_path} with processor...")
             inputs = cls._processor(
                 image_path, return_tensors="pt", format=(ocr_type == "format")
             ).to(cls._device)
+
+            logger.info(
+                f"GOT-OCR: Running model inference on {cls._device} (this may take several minutes on CPU)..."
+            )
             generate_ids = cls._model.generate(
                 **inputs,
                 do_sample=False,
@@ -70,11 +76,13 @@ class OCRGOTService:
                 stop_strings="<|im_end|>",
                 max_new_tokens=4096,
             )
+
+            logger.info(f"GOT-OCR: Decoding results...")
             result = cls._processor.decode(
                 generate_ids[0, inputs["input_ids"].shape[1] :],
                 skip_special_tokens=True,
             )
-            logger.debug(f"GOT-OCR2_0 extracted text length: {len(result)}")
+            logger.info(f"GOT-OCR: Extraction complete, text length: {len(result)}")
             return result
 
         except Exception as e:

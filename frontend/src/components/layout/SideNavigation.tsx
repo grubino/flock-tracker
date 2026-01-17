@@ -19,7 +19,8 @@ import {
   Settings20Regular,
   Money20Regular,
   Building20Regular,
-  ShoppingBag20Regular
+  ShoppingBag20Regular,
+  DocumentBulletList20Regular
 } from '@fluentui/react-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -187,6 +188,11 @@ const SideNavigation: React.FC<SideNavigationProps> = ({ isOpen, onClose }) => {
       path: '/expenses',
       label: 'Expenses',
       icon: <Money20Regular />,
+    },
+    {
+      path: '/receipts/batch-upload',
+      label: 'Batch Receipt Upload',
+      icon: <DocumentBulletList20Regular />,
     },
     {
       path: '/vendors',

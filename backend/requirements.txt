@@ -3,11 +3,11 @@ uvicorn[standard]==0.24.0
 sqlalchemy==2.0.23
 alembic==1.12.1
 psycopg2-binary==2.9.9
-python-dotenv==1.0.0
+python-dotenv==1.1.1
 pydantic[email]>=2.5.0
 python-multipart==0.0.6
-pydantic-settings==2.1.0
-pillow==10.1.0
+pydantic-settings==2.11.0
+pillow==10.2.0
 opencv-python-headless==4.8.1.78
 python-jose[cryptography]==3.3.0
 passlib==1.7.4
@@ -19,6 +19,7 @@ redis==5.0.1
 pandas==2.1.4
 rapidfuzz==3.6.1
 httpx<0.25.0
+openai>=1.0.0
 easyocr==1.7.1  # Updated for Pillow 10+ compatibility
 pymupdf>=1.23.0  # Install newer version with wheels
 numpy
@@ -28,3 +29,6 @@ safetensors>=0.3.0  # For safe model loading
 tiktoken
 verovio
 accelerate
+chandra-ocr
+paddleocr>=3.3.2  # PaddleOCR for receipt text extraction
+paddlepaddle>=3.0.0  # PaddlePaddle framework for PaddleOCR

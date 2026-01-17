@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, EmailStr, Field, PositiveFloat, constr
+from pydantic import BaseModel, EmailStr, Field, PositiveFloat, RootModel, constr
 
 
 class AnimalType(Enum):
@@ -379,8 +379,8 @@ class VendorUpdate(BaseModel):
     website: Optional[str] = Field(None, title='Website')
 
 
-class ApiLocationsMoveAnimalsPostRequest(BaseModel):
-    __root__: List[int] = Field(..., title='Animal Ids')
+class ApiLocationsMoveAnimalsPostRequest(RootModel[List[int]]):
+    root: List[int] = Field(..., title='Animal Ids')
 
 
 class AdminUserResponse(BaseModel):

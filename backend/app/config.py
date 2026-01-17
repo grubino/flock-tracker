@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Optional
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,6 +9,11 @@ class Settings(BaseSettings):
 
     # Database settings
     database_url: str = "sqlite:///./flock_tracker.db"
+
+    chandra_ocr_url: Optional[str] = None
+
+    # Redis
+    redis_url: Optional[str] = None
 
     # Server settings
     host: str = "0.0.0.0"
@@ -34,7 +39,7 @@ class Settings(BaseSettings):
         """Convert comma-separated CORS origins string to list"""
         if self.cors_origins == "*":
             return ["*"]
-        return [origin.strip() for origin in self.cors_origins.split(',')]
+        return [origin.strip() for origin in self.cors_origins.split(",")]
 
 
 settings = Settings()

@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary } from '../types';
+import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary, BatchReceiptUpload, BatchReceiptStatus } from '../types';
 import { offlineQueue } from './offlineQueue';
 
 interface QueuedError extends Error {
@@ -206,7 +206,7 @@ export const receiptsApi = {
       },
     });
   },
-  process: (id: number, ocrEngine?: 'tesseract' | 'easyocr' | 'got-ocr') => api.post<{
+  process: (id: number, ocrEngine?: 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr') => api.post<{
     status: string;
     task_id?: string;
     result?: OCRResult;
@@ -230,6 +230,18 @@ export const receiptsApi = {
     attempts: number;
   }>(`/api/receipts/${id}/extract-expense`),
   delete: (id: number) => api.delete(`/api/receipts/${id}`),
+  batchUpload: (files: File[], ocrEngine: 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr' = 'tesseract') => {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    return api.post<BatchReceiptUpload>('/api/receipts/batch-upload', formData, {
+      params: { ocr_engine: ocrEngine },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  getBatchStatus: (batchId: string) => api.get<BatchReceiptStatus>(`/api/receipts/batch/${batchId}`),
+  getBatchExpenses: (batchId: string) => api.get<Expense[]>(`/api/receipts/batch/${batchId}/expenses`),
 };
 
 export const productsApi = {
