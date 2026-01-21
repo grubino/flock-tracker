@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from app.config import settings
 from app.database.database import create_tables, SessionLocal
-from app.routers import animals_router, events_router, expenses_router, locations_router, photographs_router, auth_router, admin_router, vendors_router, receipts_router, products_router, orders_router, care_schedules_router
+from app.routers import animals_router, events_router, expenses_router, locations_router, photographs_router, auth_router, admin_router, vendors_router, receipts_router, products_router, orders_router, care_schedules_router, livestreams_router
 from app.models import *  # Import all models to ensure they're registered with SQLAlchemy
 from app.services.auth import create_admin_user
 
@@ -137,6 +137,7 @@ app.include_router(vendors_router, prefix="/api")
 app.include_router(receipts_router, prefix="/api")
 app.include_router(locations_router, prefix="/api")
 app.include_router(care_schedules_router, prefix="/api")
+app.include_router(livestreams_router)
 app.include_router(products_router)
 app.include_router(orders_router)
 app.include_router(photographs_router)

@@ -22,7 +22,7 @@ class OCRGOTService:
 
     _model = None
     _processor = None
-    _device = "cpu"
+    _device = None
 
     @classmethod
     def _initialize_model(cls):
@@ -30,15 +30,26 @@ class OCRGOTService:
         if cls._model is None:
             logger.info("Initializing GOT-OCR2_0 model...")
 
+            # Auto-detect GPU availability and fall back to CPU if needed
+            try:
+                has_gpu = torch.cuda.is_available()
+                cls._device = "cuda" if has_gpu else "cpu"
+            except:
+                cls._device = "cpu"
+
+            logger.info(f"Initializing GOT-OCR2_0 with device: {cls._device}")
+
             # Load model and tokenizer
             model_name = "stepfun-ai/GOT-OCR-2.0-hf"
             cls._processor = AutoProcessor.from_pretrained(
-                model_name, trust_remote_code=True, device_map=cls._device
+                model_name, trust_remote_code=True
             )
 
             cls._model = AutoModelForImageTextToText.from_pretrained(
-                model_name, trust_remote_code=True
-            )
+                model_name,
+                trust_remote_code=True,
+                torch_dtype=torch.float16 if cls._device == "cuda" else torch.float32
+            ).to(cls._device)
 
             cls._model.eval()
 
@@ -67,7 +78,7 @@ class OCRGOTService:
             ).to(cls._device)
 
             logger.info(
-                f"GOT-OCR: Running model inference on {cls._device} (this may take several minutes on CPU)..."
+                f"GOT-OCR: Running model inference on {cls._device}..."
             )
             generate_ids = cls._model.generate(
                 **inputs,

@@ -17,9 +17,10 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'https://localhost:8000',
+        target: 'https://flock-tracker',
         changeOrigin: true,
         secure: false,
+        ws: true,  // Enable WebSocket proxying
       }
     }
   }

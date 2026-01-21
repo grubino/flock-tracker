@@ -20,7 +20,8 @@ import {
   Money20Regular,
   Building20Regular,
   ShoppingBag20Regular,
-  DocumentBulletList20Regular
+  DocumentBulletList20Regular,
+  Video20Regular
 } from '@fluentui/react-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -203,6 +204,11 @@ const SideNavigation: React.FC<SideNavigationProps> = ({ isOpen, onClose }) => {
       path: '/locations',
       label: 'Locations',
       icon: <Location20Regular />,
+    },
+    {
+      path: '/livestreams',
+      label: 'Livestreams',
+      icon: <Video20Regular />,
     },
   ];
 

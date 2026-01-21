@@ -447,3 +447,29 @@ export interface TaskSummary {
   completed_today_count: number;
   upcoming_7_days_count: number;
 }
+
+export interface Livestream {
+  id: number;
+  name: string;
+  description?: string;
+  stream_url: string;
+  stream_type: "rtsp" | "rtmp";
+  location_id?: number;
+  is_active: boolean;
+  username?: string;
+  password?: string;
+  created_at: string;
+  updated_at: string;
+  location?: Location;
+}
+
+export interface LivestreamCreateRequest {
+  name: string;
+  description?: string;
+  stream_url: string;
+  stream_type: "rtsp" | "rtmp";
+  location_id?: number;
+  is_active?: boolean;
+  username?: string;
+  password?: string;
+}

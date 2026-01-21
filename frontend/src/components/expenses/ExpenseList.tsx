@@ -75,6 +75,12 @@ const useStyles = makeStyles({
   tableContainer: {
     overflowX: 'auto',
   },
+  clickableRow: {
+    cursor: 'pointer',
+    '&:hover': {
+      backgroundColor: tokens.colorNeutralBackground1Hover,
+    },
+  },
 });
 
 const ExpenseList: React.FC = () => {
@@ -96,6 +102,7 @@ const ExpenseList: React.FC = () => {
         start_date: startDate || undefined,
         end_date: endDate || undefined,
       }).then(res => res.data),
+    refetchOnMount: 'always',
   });
 
   const deleteMutation = useMutation({
@@ -141,7 +148,7 @@ const ExpenseList: React.FC = () => {
           appearance="primary"
           icon={<Add24Regular />}
           onClick={() => navigate('/expenses/new')}
-          style={{ width: '100%' }}
+          style={{ width: '20%' }}
         >
           Add Expense
         </Button>
@@ -241,7 +248,10 @@ const ExpenseList: React.FC = () => {
               )}
               {expenses?.map((expense) => (
                 <React.Fragment key={expense.id}>
-                  <TableRow>
+                  <TableRow
+                    className={styles.clickableRow}
+                    onClick={() => navigate(`/expenses/${expense.id}/edit`)}
+                  >
                     <TableCell>{formatDate(expense.expense_date)}</TableCell>
                     <TableCell>
                       {categoryOptions.find(opt => opt.key === expense.category)?.text || expense.category}
@@ -261,7 +271,7 @@ const ExpenseList: React.FC = () => {
                     </TableCell>
                     <TableCell>{expense.vendor?.name || '-'}</TableCell>
                     <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <Menu>
                         <MenuTrigger disableButtonEnhancement>
                           <Button icon={<MoreHorizontal24Regular />} appearance="subtle" />

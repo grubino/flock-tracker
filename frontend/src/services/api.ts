@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary, BatchReceiptUpload, BatchReceiptStatus } from '../types';
+import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary, BatchReceiptUpload, BatchReceiptStatus, Livestream, LivestreamCreateRequest } from '../types';
 import { offlineQueue } from './offlineQueue';
 
 interface QueuedError extends Error {
@@ -206,7 +206,7 @@ export const receiptsApi = {
       },
     });
   },
-  process: (id: number, ocrEngine?: 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr') => api.post<{
+  process: (id: number, ocrEngine?: 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr' | 'donut') => api.post<{
     status: string;
     task_id?: string;
     result?: OCRResult;
@@ -230,7 +230,7 @@ export const receiptsApi = {
     attempts: number;
   }>(`/api/receipts/${id}/extract-expense`),
   delete: (id: number) => api.delete(`/api/receipts/${id}`),
-  batchUpload: (files: File[], ocrEngine: 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr' = 'tesseract') => {
+  batchUpload: (files: File[], ocrEngine: 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr' | 'donut' = 'tesseract') => {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
     return api.post<BatchReceiptUpload>('/api/receipts/batch-upload', formData, {
@@ -294,6 +294,17 @@ export const careCompletionsApi = {
   create: (completion: CareCompletionCreateRequest) => api.post<CareCompletion>('/api/care-schedules/completions', completion),
   update: (id: number, completion: Partial<CareCompletionCreateRequest>) => api.put<CareCompletion>(`/api/care-schedules/completions/${id}`, completion),
   delete: (id: number) => api.delete(`/api/care-schedules/completions/${id}`),
+};
+
+export const livestreamsApi = {
+  getAll: (params?: {
+    location_id?: number;
+    is_active?: boolean;
+  }) => api.get<Livestream[]>('/api/livestreams', { params }),
+  getById: (id: number) => api.get<Livestream>(`/api/livestreams/${id}`),
+  create: (livestream: LivestreamCreateRequest) => api.post<Livestream>('/api/livestreams', livestream),
+  update: (id: number, livestream: Partial<LivestreamCreateRequest>) => api.put<Livestream>(`/api/livestreams/${id}`, livestream),
+  delete: (id: number) => api.delete(`/api/livestreams/${id}`),
 };
 
 export default api;

@@ -1,13 +1,14 @@
 from workers.celery_app import celery_app
-from app.services.ocr_layout_service import OCRLayoutService
-from app.services.ocr_service import OCRService
-from app.services.ocr_easyocr_service import OCREasyOCRService
-from app.services.ocr_got_service import OCRGOTService
-from app.services.ocr_chandra_service import OCRChandraService
-from app.services.ocr_paddle_service import OCRPaddleService
+from app.services.ocr_service_router import OCRServiceRouter
+from app.services.image_preprocessing import (
+    preprocess_image_from_bytes,
+    save_image_to_bytes,
+    get_conservative_dimensions,
+)
 from app.database.database import SessionLocal
 from app.models.receipt import Receipt
 from app.models.vendor import Vendor
+from app.models.expense import ExpenseCategory
 from app.models.batch_receipt import (
     BatchReceiptUpload,
     BatchReceiptItem,
@@ -44,33 +45,12 @@ def run_ocr_in_thread(queue, ocr_engine, temp_path, file_type, known_vendor_name
     While we can't forcefully kill a hung thread, we can timeout and move on to the next receipt.
     """
     try:
-        if ocr_engine == "easyocr":
-            extracted_data = OCREasyOCRService.parse_receipt_with_easyocr(
-                temp_path, file_type, known_vendor_names
-            )
-            raw_text = "\n".join(
-                [i["description"] for i in extracted_data.get("items", [])]
-            )
-        elif ocr_engine == "got-ocr":
-            extracted_data = OCRGOTService.parse_receipt_with_got_ocr(
-                temp_path, file_type, known_vendor_names, ocr_type="format"
-            )
-            raw_text = extracted_data.get("raw_text", "")
-        elif ocr_engine == "chandra":
-            extracted_data = OCRChandraService.parse_receipt_with_chandra(
-                temp_path, file_type, known_vendor_names, output_format="markdown"
-            )
-            raw_text = extracted_data.get("raw_text", "")
-        elif ocr_engine == "paddleocr":
-            extracted_data = OCRPaddleService.parse_receipt_with_paddle(
-                temp_path, file_type, known_vendor_names
-            )
-            raw_text = extracted_data.get("raw_text", "")
-        else:  # tesseract
-            raw_text = OCRService.extract_text(temp_path, file_type)
-            extracted_data = OCRLayoutService.parse_receipt_with_layout(
-                temp_path, file_type, known_vendor_names
-            )
+        raw_text, extracted_data = OCRServiceRouter.process_receipt(
+            ocr_engine=ocr_engine,
+            file_path=temp_path,
+            file_type=file_type,
+            known_vendor_names=known_vendor_names
+        )
 
         queue.put(
             {"success": True, "raw_text": raw_text, "extracted_data": extracted_data}
@@ -122,7 +102,7 @@ def run_ocr_with_timeout(
 
 
 @celery_app.task(bind=True, name="workers.tasks.process_receipt_ocr")
-def process_receipt_ocr(self, receipt_id: int):
+def process_receipt_ocr(self, receipt_id: int, ocr_engine: str):
     """
     Celery task to process receipt OCR asynchronously.
 
@@ -159,17 +139,52 @@ def process_receipt_ocr(self, receipt_id: int):
         if not receipt.file_data:
             raise ValueError(f"Receipt {receipt_id} has no file data stored")
 
-        # Write file data to temporary file for OCR processing
+        # Preprocess and write file data to temporary file for OCR processing
         try:
+            # Preprocess image to reduce memory usage
+            # Use conservative dimensions for memory-intensive models like Donut and PaddleOCR
+            max_width, max_height = get_conservative_dimensions()
+
+            logger.info(f"Preprocessing image for receipt {receipt_id} (max dimensions: {max_width}x{max_height})")
+
+            # Only preprocess images, not PDFs
+            if receipt.file_type in ["image/jpeg", "image/jpg", "image/png"]:
+                try:
+                    image, metadata = preprocess_image_from_bytes(
+                        receipt.file_data,
+                        max_width=max_width,
+                        max_height=max_height,
+                        convert_to_rgb=True
+                    )
+
+                    logger.info(
+                        f"Image preprocessed: {metadata['original_size']} -> {metadata['final_size']}, "
+                        f"resized: {metadata['was_resized']}, converted: {metadata['was_converted']}"
+                    )
+
+                    # Save preprocessed image to bytes
+                    processed_data = save_image_to_bytes(image, format="JPEG", quality=95)
+                    file_ext = "jpg"
+
+                    logger.info(
+                        f"Image size reduced from {len(receipt.file_data)} to {len(processed_data)} bytes "
+                        f"({len(processed_data)/len(receipt.file_data)*100:.1f}%)"
+                    )
+                except Exception as e:
+                    logger.warning(f"Image preprocessing failed, using original: {e}")
+                    processed_data = receipt.file_data
+                    file_ext = receipt.filename.split(".")[-1] if "." in receipt.filename else "jpg"
+            else:
+                # Use original data for PDFs
+                processed_data = receipt.file_data
+                file_ext = receipt.filename.split(".")[-1] if "." in receipt.filename else "pdf"
+
             # Create temporary file with correct extension
-            file_ext = (
-                receipt.filename.split(".")[-1] if "." in receipt.filename else "jpg"
-            )
             temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}")
-            temp_file.write(receipt.file_data)
+            temp_file.write(processed_data)
             temp_file.close()
             temp_path = temp_file.name
-            print(f"✓ Wrote {len(receipt.file_data)} bytes to temp file: {temp_path}")
+            logger.info(f"✓ Wrote {len(processed_data)} bytes to temp file: {temp_path}")
         except Exception as e:
             raise Exception(f"Error creating temporary file: {str(e)}")
 
@@ -177,19 +192,19 @@ def process_receipt_ocr(self, receipt_id: int):
         vendors = db.query(Vendor).all()
         known_vendor_names = [v.name for v in vendors]
 
-        # Use Tesseract with layout service
+        # Process with OCR service router
         try:
-            # Extract text using Tesseract
-            raw_text = OCRService.extract_text(temp_path, receipt.file_type)
-
             # Update state
             self.update_state(
                 state="PROCESSING", meta={"status": "Parsing receipt data..."}
             )
 
-            # Parse receipt data using layout service
-            extracted_data = OCRLayoutService.parse_receipt_with_layout(
-                temp_path, receipt.file_type, known_vendor_names
+            # Process receipt with the specified OCR engine
+            raw_text, extracted_data = OCRServiceRouter.process_receipt(
+                ocr_engine=ocr_engine,
+                file_path=temp_path,
+                file_type=receipt.file_type,
+                known_vendor_names=known_vendor_names
             )
         finally:
             # Clean up temporary file
@@ -245,7 +260,7 @@ def process_batch_receipts(self, batch_id: str):
         db.commit()
 
         # Get LLM URL from environment
-        llm_url = os.getenv("LLM_URL", "http://localhost:8080/completion")
+        llm_url = os.getenv("LLM_URL", "http://localhost:8080/v1")
 
         # Get all items in this batch
         items = (
@@ -289,17 +304,53 @@ def process_batch_receipts(self, batch_id: str):
                 if not receipt.file_data:
                     raise ValueError(f"Receipt {item.receipt_id} has no file data")
 
-                file_ext = (
-                    receipt.filename.split(".")[-1]
-                    if "." in receipt.filename
-                    else "jpg"
-                )
-                temp_file = tempfile.NamedTemporaryFile(
-                    delete=False, suffix=f".{file_ext}"
-                )
-                temp_file.write(receipt.file_data)
-                temp_file.close()
-                temp_path = temp_file.name
+                # Preprocess image to reduce memory usage
+                try:
+                    # Use conservative dimensions for memory-intensive models like Donut and PaddleOCR
+                    max_width, max_height = get_conservative_dimensions()
+
+                    logger.info(f"Preprocessing image for {item.filename} (max dimensions: {max_width}x{max_height})")
+
+                    # Only preprocess images, not PDFs
+                    if receipt.file_type in ["image/jpeg", "image/jpg", "image/png"]:
+                        try:
+                            image, metadata = preprocess_image_from_bytes(
+                                receipt.file_data,
+                                max_width=max_width,
+                                max_height=max_height,
+                                convert_to_rgb=True
+                            )
+
+                            logger.info(
+                                f"Image preprocessed: {metadata['original_size']} -> {metadata['final_size']}, "
+                                f"resized: {metadata['was_resized']}, converted: {metadata['was_converted']}"
+                            )
+
+                            # Save preprocessed image to bytes
+                            processed_data = save_image_to_bytes(image, format="JPEG", quality=95)
+                            file_ext = "jpg"
+
+                            logger.info(
+                                f"Image size reduced from {len(receipt.file_data)} to {len(processed_data)} bytes "
+                                f"({len(processed_data)/len(receipt.file_data)*100:.1f}%)"
+                            )
+                        except Exception as e:
+                            logger.warning(f"Image preprocessing failed, using original: {e}")
+                            processed_data = receipt.file_data
+                            file_ext = receipt.filename.split(".")[-1] if "." in receipt.filename else "jpg"
+                    else:
+                        # Use original data for PDFs
+                        processed_data = receipt.file_data
+                        file_ext = receipt.filename.split(".")[-1] if "." in receipt.filename else "pdf"
+
+                    # Create temporary file with correct extension
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=f".{file_ext}")
+                    temp_file.write(processed_data)
+                    temp_file.close()
+                    temp_path = temp_file.name
+                    logger.info(f"✓ Wrote {len(processed_data)} bytes to temp file: {temp_path}")
+                except Exception as e:
+                    raise Exception(f"Error creating temporary file: {str(e)}")
 
                 try:
                     # Step 1: Run OCR based on batch OCR engine with timeout
@@ -385,8 +436,16 @@ def process_batch_receipts(self, batch_id: str):
                         expense_date = receipt.created_at
 
                     # Create expense
+                    # Convert category string to enum
+                    category_str = expense_data.get("category", "other")
+                    try:
+                        category_enum = ExpenseCategory(category_str)
+                    except ValueError:
+                        # If invalid category, default to OTHER
+                        category_enum = ExpenseCategory.OTHER
+
                     expense = Expense(
-                        category=expense_data.get("category", "OTHER"),
+                        category=category_enum,
                         amount=Decimal(str(expense_data["amount"])),
                         description=expense_data.get(
                             "description", f"Receipt: {receipt.filename}"

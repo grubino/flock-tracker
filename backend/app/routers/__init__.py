@@ -10,6 +10,7 @@ from .receipts import router as receipts_router
 from .products import router as products_router
 from .orders import router as orders_router
 from .care_schedules import router as care_schedules_router
+from .livestreams import router as livestreams_router
 
 __all__ = [
     "animals_router",
@@ -23,5 +24,6 @@ __all__ = [
     "receipts_router",
     "products_router",
     "orders_router",
-    "care_schedules_router"
+    "care_schedules_router",
+    "livestreams_router"
 ]

@@ -1,5 +1,5 @@
 """
-OCR Service using datalab-to/chandra model for receipt parsing via remote HTTP endpoint
+OCR Service using datalab-to/chandra model for receipt parsing (local inference)
 Chandra provides high-accuracy OCR with excellent handling of complex layouts, tables, and forms
 """
 
@@ -11,78 +11,95 @@ import os
 from PIL import Image
 from pdf2image import convert_from_path
 import tempfile
-import httpx
+import torch
+from transformers import AutoProcessor, AutoModelForVision2Seq
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
 class OCRChandraService:
-    """OCR service using Chandra model via remote HTTP endpoint"""
+    """OCR service using Chandra model with local inference"""
 
-    # Default Chandra OCR endpoint (can be overridden with CHANDRA_OCR_URL env var)
-    _default_endpoint = "https://e42abee2739f.ngrok-free.app/ocr/"
+    _model = None
+    _processor = None
+    _device = None
 
     @classmethod
-    def _get_endpoint_url(cls) -> str:
-        """Get Chandra OCR endpoint URL from environment or use default"""
-        return os.getenv("CHANDRA_OCR_URL", cls._default_endpoint)
+    def _initialize_model(cls):
+        """Lazy initialization of Chandra model"""
+        if cls._model is None:
+            try:
+                logger.info("Initializing Chandra OCR model...")
+
+                # Auto-detect GPU availability and fall back to CPU if needed
+                try:
+                    has_gpu = torch.cuda.is_available()
+                    cls._device = "cuda" if has_gpu else "cpu"
+                except:
+                    cls._device = "cpu"
+
+                logger.info(f"Initializing Chandra OCR with device: {cls._device}")
+
+                # Load the Chandra model and processor
+                model_name = "datalab-to/chandra"
+                cls._processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
+                cls._model = AutoModelForVision2Seq.from_pretrained(
+                    model_name,
+                    trust_remote_code=True,
+                    torch_dtype=torch.float16 if cls._device == "cuda" else torch.float32
+                ).to(cls._device)
+
+                logger.info("Chandra OCR model initialized successfully")
+            except ImportError as e:
+                logger.error(f"Failed to import required dependencies: {e}")
+                logger.error("Install with: pip install transformers torch pillow")
+                raise
+            except Exception as e:
+                logger.error(f"Failed to initialize Chandra OCR model: {e}")
+                raise
 
     @classmethod
     def extract_text_from_image(
         cls, image_path: str, output_format: str = "markdown"
     ) -> str:
         """
-        Extract text from image using Chandra OCR via HTTP endpoint
+        Extract text from image using Chandra OCR with local inference
 
         Args:
             image_path: Path to the image file
-            output_format: Output format (not used with remote endpoint, kept for API compatibility)
+            output_format: Output format (not used currently, kept for API compatibility)
 
         Returns:
             Extracted text from Chandra OCR
         """
-        endpoint_url = cls._get_endpoint_url()
+        cls._initialize_model()
 
         try:
-            logger.info(f"Chandra: Sending image to remote endpoint {endpoint_url}...")
+            logger.info(f"Chandra: Processing image {image_path}...")
 
-            # Read the image file
-            with open(image_path, "rb") as f:
-                files = {"file": (os.path.basename(image_path), f, "image/jpeg")}
+            # Load and preprocess the image
+            image = Image.open(image_path).convert("RGB")
 
-                # Send POST request to Chandra OCR endpoint
-                with httpx.Client(timeout=300.0) as client:  # 5 minute timeout
-                    response = client.post(endpoint_url, files=files)
-                    response.raise_for_status()
+            # Process the image with the Chandra processor
+            inputs = cls._processor(images=image, return_tensors="pt")
+            inputs = {k: v.to(cls._device) for k, v in inputs.items()}
 
-                    result = response.json()
+            # Generate text from the image
+            with torch.no_grad():
+                generated_ids = cls._model.generate(**inputs, max_new_tokens=2048)
 
-                    # Extract text from response
-                    if "text" in result:
-                        result_text = result["text"]
-                    elif "generated_text" in result:
-                        result_text = result["generated_text"]
-                    elif "error" in result:
-                        raise ValueError(
-                            f"Chandra OCR error: {result.get('error')} - {result.get('message', '')}"
-                        )
-                    else:
-                        raise ValueError(
-                            f"Unexpected response format from Chandra OCR: {result}"
-                        )
+            # Decode the generated text
+            result_text = cls._processor.batch_decode(
+                generated_ids,
+                skip_special_tokens=True
+            )[0]
 
             logger.info(
                 f"Chandra: Extraction complete, text length: {len(result_text)}"
             )
             return result_text
 
-        except httpx.TimeoutException:
-            logger.error(f"Chandra OCR request timed out after 300s")
-            raise Exception("Chandra OCR request timed out")
-        except httpx.HTTPError as e:
-            logger.error(f"Chandra OCR HTTP error: {str(e)}")
-            raise Exception(f"Chandra OCR HTTP error: {str(e)}")
         except Exception as e:
             logger.error(f"Error extracting text with Chandra: {str(e)}")
             raise
@@ -192,7 +209,7 @@ class OCRChandraService:
             if match:
                 amount_str = match.group(1).replace(",", ".")
                 try:
-                    result["total"] = float(amount_str)
+                    result["total"] = str(float(amount_str))  # Convert to string
                     break
                 except ValueError:
                     pass
@@ -229,7 +246,7 @@ class OCRChandraService:
 
                     if description and len(description) > 1:
                         result["items"].append(
-                            {"description": description, "amount": amount}
+                            {"description": description, "amount": str(amount)}  # Convert to string
                         )
                 except ValueError:
                     pass

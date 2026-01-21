@@ -109,7 +109,7 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
   const [uploadedReceipt, setUploadedReceipt] = useState<Receipt | null>(null);
   const [ocrResult, setOcrResult] = useState<OCRResult | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr'>('got-ocr');
+  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr' | 'donut'>('got-ocr');
   const [llmError, setLlmError] = useState<string | null>(null);
   const [llmAttempts, setLlmAttempts] = useState<number>(0);
 
@@ -174,9 +174,7 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
         if (statusResponse.data.status === 'completed' && statusResponse.data.result) {
           clearInterval(pollInterval);
           setOcrResult(statusResponse.data.result);
-          if (uploadedReceipt && onComplete) {
-            onComplete(uploadedReceipt, statusResponse.data.result);
-          }
+          // Don't call onComplete here - wait for user to extract expense data
         } else if (statusResponse.data.status === 'failed') {
           clearInterval(pollInterval);
           alert(`OCR processing failed: ${statusResponse.data.error || 'Unknown error'}`);
@@ -307,13 +305,14 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
                 </Text>
                 <RadioGroup
                   value={ocrEngine}
-                  onChange={(_, data) => setOcrEngine(data.value as 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr')}
+                  onChange={(_, data) => setOcrEngine(data.value as 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr' | 'donut')}
                 >
                   <Radio value="tesseract" label="Tesseract" />
                   <Radio value="easyocr" label="EasyOCR" />
                   <Radio value="got-ocr" label="GOT-OCR2.0 (Default)" />
                   <Radio value="chandra" label="Chandra OCR" />
                   <Radio value="paddleocr" label="PaddleOCR" />
+                  <Radio value="donut" label="Donut (Receipt-Optimized)" />
                 </RadioGroup>
               </div>
               <Button
@@ -367,12 +366,22 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
                 <Text weight="semibold" block style={{ marginBottom: tokens.spacingVerticalS }}>
                   Line Items:
                 </Text>
-                {ocrResult.items.map((item, index) => (
-                  <div key={index} className={styles.lineItem}>
-                    <Text>{item.description}</Text>
-                    <Text weight="semibold">${item.amount}</Text>
-                  </div>
-                ))}
+                {ocrResult.items.map((item, index) => {
+                  // Defensive handling: ensure description and amount are strings
+                  const description = typeof item.description === 'string'
+                    ? item.description
+                    : JSON.stringify(item.description);
+                  const amount = typeof item.amount === 'string'
+                    ? item.amount
+                    : JSON.stringify(item.amount);
+
+                  return (
+                    <div key={index} className={styles.lineItem}>
+                      <Text>{description}</Text>
+                      <Text weight="semibold">${amount}</Text>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

@@ -1,5 +1,6 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+websockets==12.0
 sqlalchemy==2.0.23
 alembic==1.12.1
 psycopg2-binary==2.9.9
@@ -23,12 +24,12 @@ openai>=1.0.0
 easyocr==1.7.1  # Updated for Pillow 10+ compatibility
 pymupdf>=1.23.0  # Install newer version with wheels
 numpy
-transformers>=4.37.0  # For GOT-OCR2_0 model
-torch>=2.0.0  # PyTorch for GOT-OCR2_0
+transformers>=4.37.0  # For GOT-OCR2_0, Chandra, and Donut models
+torch>=2.6.0  # PyTorch for GOT-OCR2_0, Chandra, and Donut (install with --index-url https://download.pytorch.org/whl/cu121)
 safetensors>=0.3.0  # For safe model loading
 tiktoken
 verovio
 accelerate
-chandra-ocr
-paddleocr>=3.3.2  # PaddleOCR for receipt text extraction
-paddlepaddle>=3.0.0  # PaddlePaddle framework for PaddleOCR
+paddleocr[all]
+paddlepaddle
+psycopg2-binary

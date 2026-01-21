@@ -4,13 +4,13 @@ PaddleOCR provides high-accuracy text recognition with support for 100+ language
 """
 
 import logging
-from typing import Dict, List, Optional
-from decimal import Decimal
+from typing import Dict, List
 import re
 import os
-from PIL import Image
 from pdf2image import convert_from_path
 import tempfile
+from paddleocr import PaddleOCR
+import paddle
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -29,14 +29,21 @@ class OCRPaddleService:
                 logger.info("Initializing PaddleOCR model...")
                 # Disable oneDNN/MKL-DNN to avoid PIR attribute conversion errors
                 # on certain CPU configurations
-                from paddleocr import PaddleOCR
 
-                # Initialize PaddleOCR with English language, CPU mode
-                # Match CLI defaults for better quality results
+                # Auto-detect GPU availability and fall back to CPU if needed
+                try:
+                    has_gpu = paddle.device.is_compiled_with_cuda() and paddle.device.cuda.device_count() > 0
+                    device = "cuda" if has_gpu else "cpu"
+                except:
+                    device = "cpu"
+
+                logger.info(f"Initializing PaddleOCR with device: {device}")
+
+                # Initialize PaddleOCR with auto-detected device
                 cls._ocr = PaddleOCR(
                     ocr_version="PP-OCRv5",
                     lang="en",
-                    device="cpu",
+                    device=device,
                     enable_mkldnn=False,
                     # Document preprocessing (enabled by default in CLI)
                     use_doc_orientation_classify=True,  # Detect and correct document orientation
@@ -205,7 +212,7 @@ class OCRPaddleService:
             if match:
                 amount_str = match.group(1).replace(",", ".")
                 try:
-                    result["total"] = float(amount_str)
+                    result["total"] = str(float(amount_str))  # Convert to string
                     break
                 except ValueError:
                     pass
@@ -241,7 +248,7 @@ class OCRPaddleService:
 
                     if description and len(description) > 1:
                         result["items"].append(
-                            {"description": description, "amount": amount}
+                            {"description": description, "amount": str(amount)}  # Convert to string
                         )
                 except ValueError:
                     pass

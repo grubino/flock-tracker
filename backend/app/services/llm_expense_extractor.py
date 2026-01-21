@@ -196,7 +196,7 @@ Available expense categories:
 Extract the following information from the receipt text below:
 1. Vendor name ("Unknown" if unclear from context)
 2. Expense date (YYYY-MM-DD format, use today's date if not found)
-3. Total amount
+3. Total amount (Ensure that the sum of the line items and tax add up to this amount)
 4. Brief description (vendor name + main items)
 5. Line items with description, quantity (1 if unspecified), unit_price, category (default: "other"), and amount
 6. Any relevant notes
@@ -279,7 +279,7 @@ JSON:"""
         Returns:
             Cleaned and validated data dictionary
         """
-        # Define valid categories
+        # Define valid categories (lowercase for LLM, will convert to uppercase for database)
         valid_categories = {
             "feed",
             "seed",
@@ -301,16 +301,18 @@ JSON:"""
                 "expense_date", datetime.now().strftime("%Y-%m-%d")
             ),
             "amount": float(data.get("amount", 0)),
-            "category": data.get("category", "other"),
+            "category": data.get("category", "other").lower(),  # Normalize to lowercase first
             "description": data.get("description", ""),
             "notes": data.get("notes", ""),
             "line_items": [],
         }
 
-        # Validate category
+        # Validate and convert category to uppercase for database
         if cleaned["category"] not in valid_categories:
             logger.warning(f"Invalid category '{cleaned['category']}', using 'other'")
-            cleaned["category"] = "other"
+            cleaned["category"] = "OTHER"
+        else:
+            cleaned["category"] = cleaned["category"].upper()
 
         # Process line items
         for item in data.get("line_items", []):
@@ -320,8 +322,10 @@ JSON:"""
             }
 
             # Optional fields
-            if "category" in item and item["category"] in valid_categories:
-                line_item["category"] = item["category"]
+            if "category" in item:
+                item_category = item["category"].lower() if item["category"] else None
+                if item_category and item_category in valid_categories:
+                    line_item["category"] = item_category.upper()  # Convert to uppercase for database
             if "quantity" in item and item["quantity"] is not None:
                 line_item["quantity"] = float(item["quantity"])
             if "unit_price" in item and item["unit_price"] is not None:

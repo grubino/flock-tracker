@@ -1,14 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from typing import List
 import os
 import shutil
 from pathlib import Path
 import logging
+import uuid
+import tempfile
+
+from celery import Celery
+from celery.result import AsyncResult
 
 from app.database.database import get_db
 from app.models.receipt import Receipt
 from app.models.vendor import Vendor
+from app.models.user import User
+from app.models.expense import Expense
 from app.models.batch_receipt import (
     BatchReceiptUpload,
     BatchReceiptItem,
@@ -21,16 +29,13 @@ from app.schemas.receipt import (
     BatchReceiptUploadResponse,
     BatchReceiptStatusResponse,
 )
+from app.schemas.expense import ExpenseResponse
 from app.routers.auth import get_current_active_user
-from app.models.user import User
-import uuid
+from app.services.ocr_service_router import OCRServiceRouter
+from app.services.llm_expense_extractor import LLMExpenseExtractor
+from app.config import settings
 
 logger = logging.getLogger(__name__)
-
-# Initialize Celery client (don't import worker tasks)
-from celery import Celery
-import os
-from app.config import settings
 
 REDIS_URL = settings.redis_url
 CELERY_AVAILABLE = bool(REDIS_URL)
@@ -53,13 +58,6 @@ else:
     logger.warning(
         "REDIS_URL not set - Celery unavailable, will use synchronous processing"
     )
-    # Import services for fallback
-    from app.services.ocr_service import OCRService
-    from app.services.ocr_layout_service import OCRLayoutService
-    from app.services.ocr_easyocr_service import OCREasyOCRService
-    from app.services.ocr_got_service import OCRGOTService
-    from app.services.ocr_chandra_service import OCRChandraService
-    from app.services.ocr_paddle_service import OCRPaddleService
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
@@ -144,10 +142,10 @@ async def batch_upload_receipts(
     """
 
     # Validate OCR engine
-    if ocr_engine not in ["tesseract", "easyocr", "got-ocr", "chandra", "paddleocr"]:
+    if not OCRServiceRouter.validate_engine(ocr_engine):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid OCR engine. Choose 'tesseract', 'easyocr', 'got-ocr', 'chandra', or 'paddleocr'",
+            detail=f"Invalid OCR engine. Choose {', '.join(OCRServiceRouter.SUPPORTED_ENGINES)}",
         )
 
     # Validate at least one file
@@ -312,10 +310,10 @@ async def process_receipt(
         return {"status": "completed", "task_id": None, "result": result}
 
     # Validate OCR engine
-    if ocr_engine not in ["tesseract", "easyocr", "got-ocr", "chandra", "paddleocr"]:
+    if not OCRServiceRouter.validate_engine(ocr_engine):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid OCR engine. Choose 'tesseract', 'easyocr', 'got-ocr', 'chandra', or 'paddleocr'",
+            detail=f"Invalid OCR engine. Choose {', '.join(OCRServiceRouter.SUPPORTED_ENGINES)}",
         )
 
     try:
@@ -333,8 +331,6 @@ async def process_receipt(
             }
         else:
             # Fallback to synchronous processing
-            import tempfile
-
             # Get file data from database and write to temp file
             if not receipt.file_data:
                 raise HTTPException(
@@ -355,52 +351,13 @@ async def process_receipt(
                 vendors = db.query(Vendor).all()
                 known_vendor_names = [v.name for v in vendors]
 
-                # Choose OCR engine
-                if ocr_engine == "easyocr":
-                    logger.info(f"Using EasyOCR for receipt {receipt_id}")
-                    extracted_data = OCREasyOCRService.parse_receipt_with_easyocr(
-                        temp_path, receipt.file_type, known_vendor_names
-                    )
-                    # EasyOCR doesn't return separate raw_text, construct it from lines
-                    raw_text = "\n".join(
-                        [
-                            item["description"]
-                            for item in extracted_data.get("items", [])
-                        ]
-                    )
-                elif ocr_engine == "got-ocr":
-                    logger.info(f"Using GOT-OCR2_0 for receipt {receipt_id}")
-                    extracted_data = OCRGOTService.parse_receipt_with_got_ocr(
-                        temp_path,
-                        receipt.file_type,
-                        known_vendor_names,
-                        ocr_type="format",
-                    )
-                    raw_text = extracted_data.get("raw_text", "")
-                elif ocr_engine == "chandra":
-                    logger.info(f"Using Chandra OCR for receipt {receipt_id}")
-                    extracted_data = OCRChandraService.parse_receipt_with_chandra(
-                        temp_path,
-                        receipt.file_type,
-                        known_vendor_names,
-                        output_format="markdown",
-                    )
-                    raw_text = extracted_data.get("raw_text", "")
-                elif ocr_engine == "paddleocr":
-                    logger.info(f"Using PaddleOCR for receipt {receipt_id}")
-                    extracted_data = OCRPaddleService.parse_receipt_with_paddle(
-                        temp_path,
-                        receipt.file_type,
-                        known_vendor_names,
-                    )
-                    raw_text = extracted_data.get("raw_text", "")
-                else:  # tesseract (default)
-                    logger.info(f"Using Tesseract for receipt {receipt_id}")
-                    raw_text = OCRService.extract_text(temp_path, receipt.file_type)
-                    extracted_data = OCRLayoutService.parse_receipt_with_layout(
-                        temp_path, receipt.file_type, known_vendor_names
-                    )
-                    extracted_data["ocr_engine"] = "tesseract"
+                # Process with OCR service router
+                raw_text, extracted_data = OCRServiceRouter.process_receipt(
+                    ocr_engine=ocr_engine,
+                    file_path=temp_path,
+                    file_type=receipt.file_type,
+                    known_vendor_names=known_vendor_names
+                )
 
                 receipt.raw_text = raw_text
                 receipt.extracted_data = extracted_data
@@ -439,8 +396,6 @@ async def get_task_status(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Celery not available",
         )
-
-    from celery.result import AsyncResult
 
     try:
         task = AsyncResult(task_id, app=celery_app)
@@ -508,6 +463,24 @@ def get_receipt(
     return receipt
 
 
+@router.get("/{receipt_id}/image")
+def get_receipt_image(
+    receipt_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get the receipt image file"""
+    receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+
+    if not receipt.file_data:
+        raise HTTPException(status_code=404, detail="Receipt image not found")
+
+    # Return the image with appropriate content type
+    return Response(content=receipt.file_data, media_type=receipt.file_type)
+
+
 @router.delete("/{receipt_id}")
 def delete_receipt(
     receipt_id: int,
@@ -545,8 +518,6 @@ async def extract_expense_data(
     Args:
         receipt_id: ID of the receipt to extract from
     """
-    from app.services.llm_expense_extractor import LLMExpenseExtractor
-
     receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
@@ -559,7 +530,7 @@ async def extract_expense_data(
         )
 
     # Get LLM URL from environment variable
-    llm_url = os.getenv("LLM_URL", "http://localhost:8080/completion")
+    llm_url = os.getenv("LLM_URL", "http://localhost:8080/v1")
 
     # Use retry wrapper for robust extraction
     result = await LLMExpenseExtractor.extract_expense_data_with_retry(
@@ -633,9 +604,6 @@ def get_batch_expenses(
     Returns:
         List of expense records created by this batch
     """
-    from app.models.expense import Expense
-    from app.schemas.expense import ExpenseResponse
-
     batch = (
         db.query(BatchReceiptUpload)
         .filter(BatchReceiptUpload.batch_id == batch_id)

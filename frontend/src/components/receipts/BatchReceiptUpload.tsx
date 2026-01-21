@@ -4,7 +4,7 @@ import type { BatchReceiptStatus } from '../../types';
 
 const BatchReceiptUpload: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr'>('got-ocr');
+  const [ocrEngine, setOcrEngine] = useState<'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr' | 'donut'>('got-ocr');
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [batchId, setBatchId] = useState<string | null>(null);
@@ -171,7 +171,7 @@ const BatchReceiptUpload: React.FC = () => {
               OCR Engine:
             </label>
             <div style={{ display: 'flex', gap: '15px' }}>
-              {['tesseract', 'easyocr', 'got-ocr', 'chandra', 'paddleocr'].map((engine) => (
+              {['tesseract', 'easyocr', 'got-ocr', 'chandra', 'paddleocr', 'donut'].map((engine) => (
                 <label key={engine} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="radio"

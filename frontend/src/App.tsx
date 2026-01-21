@@ -31,6 +31,9 @@ import ProfileView from './components/profile/ProfileView';
 import CareScheduleList from './components/care-schedules/CareScheduleList';
 import CareScheduleForm from './components/care-schedules/CareScheduleForm';
 import CareScheduleCalendar from './components/care-schedules/CareScheduleCalendar';
+import LivestreamList from './components/livestreams/LivestreamList';
+import LivestreamForm from './components/livestreams/LivestreamForm';
+import LivestreamViewer from './components/livestreams/LivestreamViewer';
 import UserManagement from './components/admin/UserManagement';
 import CustomerDashboard from './components/customer/CustomerDashboard';
 import { RoleGuard } from './components/auth/RoleGuard';
@@ -319,6 +322,42 @@ function App() {
                       <RoleGuard minRole="user">
                         <Layout>
                           <CareScheduleForm isEdit />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/livestreams" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <LivestreamList />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/livestreams/new" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <LivestreamForm />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/livestreams/:id/view" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <LivestreamViewer />
+                        </Layout>
+                      </RoleGuard>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/livestreams/:id/edit" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <LivestreamForm isEdit />
                         </Layout>
                       </RoleGuard>
                     </ProtectedRoute>

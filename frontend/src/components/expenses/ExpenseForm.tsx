@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
   Text,
@@ -19,15 +19,17 @@ import {
   TableRow,
   TableHeaderCell,
   TableBody,
-  TableCell
+  TableCell,
+  Spinner
 } from '@fluentui/react-components';
 import { Delete24Regular, Add24Regular } from '@fluentui/react-icons';
 import { expensesApi, vendorsApi } from '../../services/api';
 import { ExpenseCategory } from '../../types';
 import type { ExpenseCreateRequest, Expense, VendorCreateRequest, Receipt, OCRResult, ExpenseLineItemCreate } from '../../types';
 import ReceiptUpload from '../receipts/ReceiptUpload';
+import ReceiptImageViewer from '../receipts/ReceiptImageViewer';
 
-interface ExpenseFormProps {
+interface ExpenseFormInnerProps {
   expense?: Expense;
   isEdit?: boolean;
 }
@@ -112,7 +114,7 @@ const useStyles = makeStyles({
   },
 });
 
-const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) => {
+const ExpenseFormInner: React.FC<ExpenseFormInnerProps> = ({ expense, isEdit = false }) => {
   const styles = useStyles();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -312,19 +314,28 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
       )}
 
       {(!showReceiptUpload || isEdit) && (
-        <Card>
-          <Text size={600} weight="semibold">
-            {isEdit ? 'Edit Expense' : 'Add New Expense'}
-          </Text>
-          {!isEdit && (
-            <Button
-              onClick={() => setShowReceiptUpload(true)}
-              style={{ marginTop: tokens.spacingVerticalS }}
-            >
-              Upload Receipt Instead
-            </Button>
+        <>
+          {/* Show receipt image if available */}
+          {expense?.receipt_id && (
+            <ReceiptImageViewer
+              receiptId={expense.receipt_id}
+              receiptFilename={expense.receipt?.filename}
+            />
           )}
-          <form onSubmit={handleSubmit} className={styles.form}>
+
+          <Card>
+            <Text size={600} weight="semibold">
+              {isEdit ? 'Edit Expense' : 'Add New Expense'}
+            </Text>
+            {!isEdit && (
+              <Button
+                onClick={() => setShowReceiptUpload(true)}
+                style={{ marginTop: tokens.spacingVerticalS }}
+              >
+                Upload Receipt Instead
+              </Button>
+            )}
+            <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.formGrid}>
             <div className={styles.field}>
               <Label htmlFor="category" required>Category</Label>
@@ -542,9 +553,54 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ expense, isEdit = false }) =>
           </div>
         </form>
         </Card>
+        </>
       )}
     </div>
   );
+};
+
+// Wrapper component that fetches expense data when in edit mode
+const ExpenseForm: React.FC<{ isEdit?: boolean }> = ({ isEdit = false }) => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const { data: expense, isLoading, error } = useQuery({
+    queryKey: ['expenses', id],
+    queryFn: () => expensesApi.getById(parseInt(id!)).then(res => res.data),
+    enabled: isEdit && !!id,
+  });
+
+  if (isEdit && isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Spinner label="Loading expense..." />
+      </div>
+    );
+  }
+
+  if (isEdit && error) {
+    return (
+      <div style={{ padding: tokens.spacingVerticalXL, textAlign: 'center' }}>
+        <Text size={500} weight="semibold">Error loading expense</Text>
+        <div style={{ marginTop: tokens.spacingVerticalM }}>
+          <Button onClick={() => navigate('/expenses')}>Back to Expenses</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isEdit && !expense) {
+    return (
+      <div style={{ padding: tokens.spacingVerticalXL, textAlign: 'center' }}>
+        <Text size={500} weight="semibold">Expense not found</Text>
+        <div style={{ marginTop: tokens.spacingVerticalM }}>
+          <Button onClick={() => navigate('/expenses')}>Back to Expenses</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return <ExpenseFormInner expense={expense} isEdit={isEdit} />;
 };
 
 export default ExpenseForm;
