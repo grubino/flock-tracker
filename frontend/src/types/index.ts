@@ -131,6 +131,7 @@ export interface Animal {
   current_location_id?: number;
   sire_id?: number;
   dam_id?: number;
+  on_farm: boolean;
   created_at: string;
   updated_at: string;
   current_location?: Location;

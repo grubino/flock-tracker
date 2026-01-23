@@ -170,8 +170,8 @@ const BatchReceiptUpload: React.FC = () => {
             <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
               OCR Engine:
             </label>
-            <div style={{ display: 'flex', gap: '15px' }}>
-              {['tesseract', 'easyocr', 'got-ocr', 'chandra', 'paddleocr', 'donut'].map((engine) => (
+            <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+              {['got-ocr', 'donut', 'chandra', 'paddleocr', 'easyocr', 'tesseract'].map((engine) => (
                 <label key={engine} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   <input
                     type="radio"

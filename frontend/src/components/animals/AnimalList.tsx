@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Card,
@@ -152,6 +152,7 @@ const useStyles = makeStyles({
 
 const AnimalList: React.FC = () => {
   const styles = useStyles();
+  const queryClient = useQueryClient();
   const [selectedTab, setSelectedTab] = useState<string>('all');
 
   // Filter state
@@ -167,6 +168,13 @@ const AnimalList: React.FC = () => {
     queryFn: () => animalsApi.getAll().then(res => res.data),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => animalsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['animals'] });
+    },
+  });
+
   const { data: locations } = useQuery({
     queryKey: ['locations'],
     queryFn: () => locationsApi.getAll().then(res => res.data),
@@ -179,6 +187,13 @@ const AnimalList: React.FC = () => {
 
   const handleTabSelect = (_event: SelectTabEvent, data: SelectTabData) => {
     setSelectedTab(data.value as string);
+  };
+
+  const handleDelete = (animal: Animal) => {
+    const animalName = animal.name || animal.tag_number;
+    if (window.confirm(`Are you sure you want to delete ${animalName}? This action cannot be undone.`)) {
+      deleteMutation.mutate(animal.id);
+    }
   };
 
   const clearFilters = () => {
@@ -471,6 +486,15 @@ const AnimalList: React.FC = () => {
                     Edit
                   </Button>
                 </RouterLink>
+                <Button
+                  appearance="secondary"
+                  size="small"
+                  style={{ flex: 1 }}
+                  onClick={() => handleDelete(animal)}
+                  disabled={deleteMutation.isPending}
+                >
+                  Delete
+                </Button>
               </div>
             </Card>
             );

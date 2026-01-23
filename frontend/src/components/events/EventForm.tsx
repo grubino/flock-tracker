@@ -12,11 +12,13 @@ import {
   Textarea,
   Spinner,
   makeStyles,
-  tokens
+  tokens,
+  Checkbox
 } from '@fluentui/react-components';
+import { Add20Regular, Dismiss20Regular } from '@fluentui/react-icons';
 import { eventsApi, animalsApi } from '../../services/api';
-import { EventType } from '../../types';
-import type { EventCreateRequest, Event } from '../../types';
+import { EventType, AnimalType, SheepGender } from '../../types';
+import type { EventCreateRequest, Event, AnimalCreateRequest } from '../../types';
 
 interface EventFormProps {
   event?: Event;
@@ -60,6 +62,30 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
     marginBottom: tokens.spacingVerticalM,
   },
+  lambSection: {
+    padding: tokens.spacingVerticalL,
+    backgroundColor: tokens.colorNeutralBackground1Hover,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  lambCard: {
+    padding: tokens.spacingVerticalM,
+    marginBottom: tokens.spacingVerticalM,
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  lambHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: tokens.spacingVerticalM,
+  },
+  lambFields: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: tokens.spacingVerticalM,
+  },
 });
 
 const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false }) => {
@@ -86,13 +112,28 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Lamb creation state
+  const [createLambs, setCreateLambs] = useState(false);
+  const [lambs, setLambs] = useState<Array<{
+    tag_number: string;
+    name: string;
+    sheep_gender: SheepGender;
+  }>>([]);
+
   // Update form state when event data is loaded
   useEffect(() => {
     if (event) {
       setSelectedAnimalIds(event.animal_id ? [event.animal_id.toString()] : []);
       setSelectedEventTypes(event.event_type ? [event.event_type] : [EventType.HEALTH_CHECK]);
-      // Extract just the date part without timezone conversion
-      setEventDate(event.event_date ? event.event_date : new Date().toISOString().split('T')[0]);
+      // Extract date part (YYYY-MM-DD) from ISO datetime string
+      // Backend returns ISO 8601 format: "2024-01-22T14:30:00.000Z"
+      // Date input needs: "2024-01-22"
+      if (event.event_date) {
+        const dateOnly = event.event_date.split('T')[0];
+        setEventDate(dateOnly);
+      } else {
+        setEventDate(new Date().toISOString().split('T')[0]);
+      }
       setDescription(event.description || '');
       setNotes(event.notes || '');
     } else if (preselectedAnimalId && !isEdit) {
@@ -100,15 +141,22 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
     }
   }, [event, preselectedAnimalId, isEdit]);
 
-  const { data: animals } = useQuery({
+  const { data: allAnimals } = useQuery({
     queryKey: ['animals'],
     queryFn: () => animalsApi.getAll().then(res => res.data),
   });
+
+  // Filter animals to only show those on the farm
+  const animals = useMemo(() => {
+    if (!allAnimals) return [];
+    return allAnimals.filter(animal => animal.on_farm);
+  }, [allAnimals]);
 
   const createMutation = useMutation({
     mutationFn: (data: EventCreateRequest) => eventsApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['animals'] });
       // Navigate back to previous page if coming from animal detail
       if (preselectedAnimalId) {
         navigate(-1);
@@ -122,6 +170,7 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
     mutationFn: (data: EventCreateRequest[]) => eventsApi.createBulk(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['animals'] });
       // Navigate back to previous page if coming from animal detail
       if (preselectedAnimalId) {
         navigate(-1);
@@ -136,6 +185,7 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
       eventsApi.update(event!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['animals'] });
       navigate('/events');
     },
   });
@@ -146,6 +196,26 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
   }, [selectedAnimalIds, selectedEventTypes]);
 
   const isBulkMode = eventCount > 1;
+
+  // Check if lambing event type is selected
+  const isLambingEvent = useMemo(() => {
+    return selectedEventTypes.includes(EventType.LAMBING);
+  }, [selectedEventTypes]);
+
+  // Helper functions for lamb management
+  const addLamb = () => {
+    setLambs([...lambs, { tag_number: '', name: '', sheep_gender: SheepGender.EWE }]);
+  };
+
+  const removeLamb = (index: number) => {
+    setLambs(lambs.filter((_, i) => i !== index));
+  };
+
+  const updateLamb = (index: number, field: string, value: string) => {
+    const updatedLambs = [...lambs];
+    updatedLambs[index] = { ...updatedLambs[index], [field]: value };
+    setLambs(updatedLambs);
+  };
 
   // Get display value for animal dropdown
   const animalDropdownValue = useMemo(() => {
@@ -165,7 +235,7 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
       : '';
   }, [animals, selectedAnimalIds, isEdit]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (selectedAnimalIds.length === 0) {
@@ -178,11 +248,52 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
       return;
     }
 
+    // Validate lamb data if creating lambs
+    if (createLambs && lambs.length > 0) {
+      const invalidLambs = lambs.filter(lamb => !lamb.tag_number.trim());
+      if (invalidLambs.length > 0) {
+        alert('Please provide a tag number for all lambs');
+        return;
+      }
+    }
+
     const baseEventData = {
       event_date: new Date(eventDate).toISOString(),
       description,
       notes,
     };
+
+    // If creating lambs, first create the lamb animals
+    if (createLambs && lambs.length > 0 && !isEdit) {
+      try {
+        // Get the dam (mother) from selected animal
+        const damId = selectedAnimalIds.length === 1 ? parseInt(selectedAnimalIds[0]) : undefined;
+        const dam = animals?.find(a => a.id === damId);
+
+        // Create each lamb
+        const lambPromises = lambs.map(lamb => {
+          const lambData: AnimalCreateRequest = {
+            tag_number: lamb.tag_number,
+            name: lamb.name || undefined,
+            animal_type: AnimalType.SHEEP,
+            sheep_gender: lamb.sheep_gender,
+            birth_date: eventDate, // Use event date as birth date
+            dam_id: damId,
+            current_location_id: dam?.current_location_id,
+          };
+          return animalsApi.create(lambData);
+        });
+
+        await Promise.all(lambPromises);
+
+        // Invalidate animals query to refresh the list
+        queryClient.invalidateQueries({ queryKey: ['animals'] });
+      } catch (error) {
+        alert('Failed to create lamb animals. Please try again.');
+        console.error('Error creating lambs:', error);
+        return;
+      }
+    }
 
     if (isBulkMode && !isEdit) {
       // Create an event for each combination of animal and event type
@@ -357,6 +468,107 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
               </Text>
             )}
           </div>
+
+          {/* Lamb Creation Section - Only show for lambing events in create mode with single ewe */}
+          {isLambingEvent && !isEdit && selectedAnimalIds.length === 1 && (
+            <div className={styles.lambSection}>
+              <div style={{ marginBottom: tokens.spacingVerticalM }}>
+                <Checkbox
+                  checked={createLambs}
+                  onChange={(_, data) => {
+                    setCreateLambs(data.checked as boolean);
+                    if (!data.checked) {
+                      setLambs([]);
+                    }
+                  }}
+                  label="Create lamb animals"
+                />
+                <Text className={styles.infoText}>
+                  Optionally create lamb animal records as part of this lambing event
+                </Text>
+              </div>
+
+              {createLambs && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: tokens.spacingVerticalM }}>
+                    <Text weight="semibold" size={400}>
+                      Lambs ({lambs.length})
+                    </Text>
+                    <Button
+                      appearance="subtle"
+                      icon={<Add20Regular />}
+                      onClick={addLamb}
+                    >
+                      Add Lamb
+                    </Button>
+                  </div>
+
+                  {lambs.length === 0 && (
+                    <Text className={styles.infoText} style={{ textAlign: 'center', display: 'block' }}>
+                      Click "Add Lamb" to create lamb records
+                    </Text>
+                  )}
+
+                  {lambs.map((lamb, index) => (
+                    <div key={index} className={styles.lambCard}>
+                      <div className={styles.lambHeader}>
+                        <Text weight="semibold" size={300}>
+                          Lamb {index + 1}
+                        </Text>
+                        <Button
+                          appearance="subtle"
+                          icon={<Dismiss20Regular />}
+                          onClick={() => removeLamb(index)}
+                          size="small"
+                        />
+                      </div>
+
+                      <div className={styles.lambFields}>
+                        <div className={styles.field}>
+                          <Label required>Tag Number</Label>
+                          <Input
+                            value={lamb.tag_number}
+                            onChange={(_, data) => updateLamb(index, 'tag_number', data.value)}
+                            placeholder="e.g., L001"
+                            required
+                          />
+                        </div>
+
+                        <div className={styles.field}>
+                          <Label>Name</Label>
+                          <Input
+                            value={lamb.name}
+                            onChange={(_, data) => updateLamb(index, 'name', data.value)}
+                            placeholder="Optional"
+                          />
+                        </div>
+
+                        <div className={styles.field}>
+                          <Label required>Gender</Label>
+                          <Dropdown
+                            value={lamb.sheep_gender}
+                            selectedOptions={[lamb.sheep_gender]}
+                            onOptionSelect={(_, data) =>
+                              updateLamb(index, 'sheep_gender', data.optionValue as string)
+                            }
+                          >
+                            <Option value={SheepGender.EWE}>Ewe</Option>
+                            <Option value={SheepGender.RAM}>Ram</Option>
+                          </Dropdown>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {lambs.length > 0 && (
+                    <Text className={styles.infoText} style={{ marginTop: tokens.spacingVerticalM }}>
+                      Lambs will be created with birth date {eventDate} and dam set to the selected ewe
+                    </Text>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           <div className={styles.actions}>
             <Button

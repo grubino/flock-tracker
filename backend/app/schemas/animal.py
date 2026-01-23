@@ -37,6 +37,7 @@ class Animal(AnimalBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    on_farm: bool = Field(..., description="Whether the animal is currently on the farm (derived from events)")
     created_at: datetime
     updated_at: datetime
 

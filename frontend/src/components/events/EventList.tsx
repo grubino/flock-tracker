@@ -182,6 +182,7 @@ const EventList: React.FC = () => {
     mutationFn: (eventId: number) => eventsApi.delete(eventId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['animals'] });
       setDeleteDialogOpen(false);
       setEventToDelete(null);
     },

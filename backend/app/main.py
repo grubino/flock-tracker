@@ -8,7 +8,11 @@ import os
 import argparse
 import sys
 from pathlib import Path
+from datetime import datetime
 from app.config import settings
+
+# Server startup timestamp for cache invalidation
+SERVER_START_TIME = datetime.now().isoformat()
 from app.database.database import create_tables, SessionLocal
 from app.routers import animals_router, events_router, expenses_router, locations_router, photographs_router, auth_router, admin_router, vendors_router, receipts_router, products_router, orders_router, care_schedules_router, livestreams_router
 from app.models import *  # Import all models to ensure they're registered with SQLAlchemy
@@ -149,6 +153,7 @@ async def api_info():
     return {
         "app_name": settings.app_name,
         "version": settings.version,
+        "server_start_time": SERVER_START_TIME,
         "endpoints": {
             "animals": "/api/animals",
             "events": "/api/events",

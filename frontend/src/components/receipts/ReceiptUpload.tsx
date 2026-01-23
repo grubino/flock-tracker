@@ -307,12 +307,12 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
                   value={ocrEngine}
                   onChange={(_, data) => setOcrEngine(data.value as 'tesseract' | 'easyocr' | 'got-ocr' | 'chandra' | 'paddleocr' | 'donut')}
                 >
-                  <Radio value="tesseract" label="Tesseract" />
-                  <Radio value="easyocr" label="EasyOCR" />
                   <Radio value="got-ocr" label="GOT-OCR2.0 (Default)" />
+                  <Radio value="donut" label="Donut (Receipt-Optimized)" />
                   <Radio value="chandra" label="Chandra OCR" />
                   <Radio value="paddleocr" label="PaddleOCR" />
-                  <Radio value="donut" label="Donut (Receipt-Optimized)" />
+                  <Radio value="easyocr" label="EasyOCR" />
+                  <Radio value="tesseract" label="Tesseract" />
                 </RadioGroup>
               </div>
               <Button

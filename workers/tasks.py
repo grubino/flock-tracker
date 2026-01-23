@@ -45,6 +45,7 @@ def run_ocr_in_thread(queue, ocr_engine, temp_path, file_type, known_vendor_name
     While we can't forcefully kill a hung thread, we can timeout and move on to the next receipt.
     """
     try:
+        # Run OCR service
         raw_text, extracted_data = OCRServiceRouter.process_receipt(
             ocr_engine=ocr_engine,
             file_path=temp_path,

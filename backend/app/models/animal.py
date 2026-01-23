@@ -46,5 +46,19 @@ class Animal(Base):
     photographs = relationship("Photograph", back_populates="animal", cascade="all, delete-orphan")
     care_schedules = relationship("CareSchedule", secondary="care_schedule_animals", back_populates="animals")
 
+    @property
+    def on_farm(self) -> bool:
+        """
+        Determine if animal is currently on the farm.
+        Returns False if the animal has a DEATH, SOLD, or SLAUGHTER event.
+        """
+        from app.models.event import EventType
+
+        # Check if any events indicate the animal is no longer on the farm
+        for event in self.events:
+            if event.event_type in [EventType.DEATH, EventType.SOLD, EventType.SLAUGHTER]:
+                return False
+        return True
+
     def __repr__(self):
         return f"<Animal(id={self.id}, tag_number='{self.tag_number}', type='{self.animal_type.value}', name='{self.name}')>"

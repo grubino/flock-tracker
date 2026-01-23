@@ -17,14 +17,21 @@ class AnimalService:
         limit: int = 100,
         animal_type: Optional[AnimalType] = None,
         location_id: Optional[int] = None,
-        current_user: Optional[User] = None
+        current_user: Optional[User] = None,
+        on_farm: Optional[bool] = True
     ) -> List[Animal]:
-        """Get all animals with optional filtering"""
+        """Get all animals with optional filtering
+
+        Args:
+            on_farm: Filter by on_farm status. Defaults to True (only show animals on farm).
+                     Set to None to show all animals regardless of status.
+        """
         query = self.db.query(Animal).options(
             joinedload(Animal.current_location),
             joinedload(Animal.sire),
             joinedload(Animal.dam),
-            joinedload(Animal.photographs)
+            joinedload(Animal.photographs),
+            joinedload(Animal.events)  # Need events to compute on_farm property
         )
 
         # Customers can only see sellable animals
@@ -37,7 +44,15 @@ class AnimalService:
         if location_id:
             query = query.filter(Animal.current_location_id == location_id)
 
-        return query.offset(skip).limit(limit).all()
+        # Get all animals matching criteria first
+        all_animals = query.all()
+
+        # Filter by on_farm status if requested
+        if on_farm is not None:
+            all_animals = [animal for animal in all_animals if animal.on_farm == on_farm]
+
+        # Apply pagination after filtering
+        return all_animals[skip:skip + limit]
 
     def get_animal(self, animal_id: int) -> Optional[Animal]:
         """Get a single animal by ID"""

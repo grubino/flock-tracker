@@ -40,6 +40,7 @@ import { RoleGuard } from './components/auth/RoleGuard';
 import { useAuth } from './contexts/AuthContext';
 import { createQueryClient, persisterOptions } from './lib/queryPersister';
 import { useTokenRefresh } from './hooks/useTokenRefresh';
+import { useServerVersion } from './hooks/useServerVersion';
 
 const queryClient = createQueryClient();
 
@@ -55,19 +56,18 @@ export const HomePage: React.FC = () => {
   return <AnimalList />;
 };
 
-function App() {
+// AppContent component that runs inside QueryClientProvider
+const AppContent: React.FC = () => {
   // Enable automatic token refresh
   useTokenRefresh();
 
+  // Check server version and clear cache on server restart
+  useServerVersion();
+
   return (
-    <FluentProvider theme={webLightTheme}>
-      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id'}>
-        <AuthProvider>
-          <OfflineProvider>
-            <PersistQueryClientProvider client={queryClient} persistOptions={persisterOptions}>
-              <Router>
-                <OfflineIndicator />
-                <Routes>
+    <Router>
+      <OfflineIndicator />
+      <Routes>
                   {/* Public routes */}
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
@@ -381,6 +381,17 @@ function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Router>
+  );
+};
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id'}>
+        <AuthProvider>
+          <OfflineProvider>
+            <PersistQueryClientProvider client={queryClient} persistOptions={persisterOptions}>
+              <AppContent />
             </PersistQueryClientProvider>
           </OfflineProvider>
         </AuthProvider>

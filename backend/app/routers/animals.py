@@ -20,6 +20,7 @@ def read_animals(
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of records to return"),
     animal_type: Optional[AnimalType] = Query(None, description="Filter by animal type"),
     location_id: Optional[int] = Query(None, description="Filter by current location"),
+    on_farm: Optional[bool] = Query(True, description="Filter by on_farm status. True=on farm only, False=off farm only, None=all animals"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -30,7 +31,8 @@ def read_animals(
         limit=limit,
         animal_type=animal_type,
         location_id=location_id,
-        current_user=current_user
+        current_user=current_user,
+        on_farm=on_farm
     )
     return animals
 
