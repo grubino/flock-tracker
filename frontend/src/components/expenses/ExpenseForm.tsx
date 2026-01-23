@@ -135,6 +135,7 @@ const ExpenseFormInner: React.FC<ExpenseFormInnerProps> = ({ expense, isEdit = f
     expense?.line_items || []
   );
   const [receiptId, setReceiptId] = useState<number | null>(expense?.receipt_id || null);
+  const [receiptFilename, setReceiptFilename] = useState<string | undefined>(expense?.receipt?.filename);
 
   // Debounce vendor search
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(vendorSearchQuery);
@@ -199,8 +200,10 @@ const ExpenseFormInner: React.FC<ExpenseFormInnerProps> = ({ expense, isEdit = f
   };
 
   const handleReceiptComplete = (receipt: Receipt, ocrResult: OCRResult) => {
-    // Save receipt ID
+    // Save receipt ID and filename
+    console.log('handleReceiptComplete called with receipt:', receipt.id, receipt.filename);
     setReceiptId(receipt.id);
+    setReceiptFilename(receipt.filename);
 
     // Populate form with OCR data
     if (ocrResult.vendor) {
@@ -316,11 +319,14 @@ const ExpenseFormInner: React.FC<ExpenseFormInnerProps> = ({ expense, isEdit = f
       {(!showReceiptUpload || isEdit) && (
         <>
           {/* Show receipt image if available */}
-          {expense?.receipt_id && (
-            <ReceiptImageViewer
-              receiptId={expense.receipt_id}
-              receiptFilename={expense.receipt?.filename}
-            />
+          {receiptId && (
+            <>
+              {console.log('Rendering ReceiptImageViewer with receiptId:', receiptId, 'filename:', receiptFilename)}
+              <ReceiptImageViewer
+                receiptId={receiptId}
+                receiptFilename={receiptFilename}
+              />
+            </>
           )}
 
           <Card>

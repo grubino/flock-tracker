@@ -139,9 +139,11 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
   const extractExpenseMutation = useMutation({
     mutationFn: (receiptId: number) => receiptsApi.extractExpense(receiptId),
     onSuccess: (response) => {
+      console.log('extractExpenseMutation.onSuccess:', response.data);
       setLlmAttempts(response.data.attempts);
       if (response.data.status === 'success' && response.data.expense_data) {
         setLlmError(null);
+        console.log('Extraction successful, uploadedReceipt:', uploadedReceipt, 'onComplete:', !!onComplete);
         if (uploadedReceipt && onComplete) {
           const r = response.data.expense_data;
           if (!r) {
@@ -154,10 +156,12 @@ const ReceiptUpload: React.FC<ReceiptUploadProps> = ({ onComplete }) => {
               date: r.expense_date,
               total: r.amount
             };
+            console.log('Calling onComplete with receipt:', uploadedReceipt.id, 'and OCR result');
             onComplete(uploadedReceipt, p);
           }
         }
       } else if (response.data.status === 'failed') {
+        console.log('Extraction failed:', response.data.error);
         setLlmError(response.data.error || 'Unknown error');
       }
     },
