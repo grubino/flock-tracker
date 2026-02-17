@@ -289,7 +289,7 @@ const AnimalList: React.FC = () => {
     <div className={styles.container}>
       <div className={styles.header}>
         <Text as="h1" size={800} weight="bold">
-          Animals
+          Animals ({ animals?.length || 0 })
         </Text>
         <div className={styles.headerActions}>
           <RouterLink to="/animals/import" style={{ textDecoration: 'none' }}>

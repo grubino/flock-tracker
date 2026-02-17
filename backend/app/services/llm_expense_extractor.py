@@ -291,6 +291,7 @@ JSON:"""
             "utilities",
             "labor",
             "maintenance",
+            "tax",
             "other",
         }
 

@@ -201,7 +201,6 @@ const ExpenseFormInner: React.FC<ExpenseFormInnerProps> = ({ expense, isEdit = f
 
   const handleReceiptComplete = (receipt: Receipt, ocrResult: OCRResult) => {
     // Save receipt ID and filename
-    console.log('handleReceiptComplete called with receipt:', receipt.id, receipt.filename);
     setReceiptId(receipt.id);
     setReceiptFilename(receipt.filename);
 
@@ -320,13 +319,10 @@ const ExpenseFormInner: React.FC<ExpenseFormInnerProps> = ({ expense, isEdit = f
         <>
           {/* Show receipt image if available */}
           {receiptId && (
-            <>
-              {console.log('Rendering ReceiptImageViewer with receiptId:', receiptId, 'filename:', receiptFilename)}
-              <ReceiptImageViewer
-                receiptId={receiptId}
-                receiptFilename={receiptFilename}
-              />
-            </>
+            <ReceiptImageViewer
+              receiptId={receiptId}
+              receiptFilename={receiptFilename}
+            />
           )}
 
           <Card>

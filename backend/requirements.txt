@@ -33,3 +33,7 @@ accelerate
 paddleocr[all]
 paddlepaddle
 psycopg2-binary
+langchain>=0.3.0
+langchain-community>=0.3.0
+langchain-experimental>=0.3.0
+sqlalchemy-utils>=0.42.0

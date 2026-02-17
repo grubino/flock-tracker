@@ -5,6 +5,7 @@ from app.services.image_preprocessing import (
     save_image_to_bytes,
     get_conservative_dimensions,
 )
+from app.services.langchain_sql_agent import LangChainSQLAgent
 from app.database.database import SessionLocal
 from app.models.receipt import Receipt
 from app.models.vendor import Vendor
@@ -530,3 +531,79 @@ def process_batch_receipts(self, batch_id: str):
         raise
     finally:
         db.close()
+
+from langchain_community.agent_toolkits.sql.prompt import SQL_PREFIX
+
+@celery_app.task(bind=True, name="query_database_with_agent")
+def query_database_with_agent(self, question: str, llm_url: str = "http://localhost:8080"):
+    """
+    Query the database using natural language via LangChain SQL Agent
+
+    Args:
+        question: Natural language question about the data
+        llm_url: URL of the llama.cpp server (default: http://localhost:8080)
+
+    Returns:
+        Dict with:
+        - success: bool
+        - answer: str (natural language answer)
+        - sql: str (SQL query that was executed, if available)
+        - error: str (error message if failed)
+        - intermediate_steps: list (agent's reasoning process)
+    """
+    try:
+        self.update_state(
+            state="PROCESSING",
+            meta={"status": "Initializing SQL agent..."}
+        )
+
+        # Initialize the agent
+        agent = LangChainSQLAgent(
+            llm_url=llm_url,
+            temperature=0.1,  # Low temperature for factual responses
+            prefix=SQL_PREFIX + "\nIMPORTANT: Ignore the sample rows shown when getting the schema.",
+        )
+
+        self.update_state(
+            state="PROCESSING",
+            meta={"status": f"Processing query: {question[:50]}..."}
+        )
+
+        # Execute the query
+        result = agent.query(question)
+
+        # Clean up
+        agent.close()
+
+        if result["success"]:
+            self.update_state(
+                state="SUCCESS",
+                meta={
+                    "status": "Query completed",
+                    "answer": result["answer"]
+                }
+            )
+        else:
+            self.update_state(
+                state="FAILURE",
+                meta={
+                    "status": "Query failed",
+                    "error": result["error"]
+                }
+            )
+
+        return result
+
+    except Exception as e:
+        error_msg = str(e)
+        self.update_state(
+            state="FAILURE",
+            meta={"status": "failed", "error": error_msg}
+        )
+        return {
+            "success": False,
+            "answer": None,
+            "sql": None,
+            "error": error_msg,
+            "intermediate_steps": [],
+        }

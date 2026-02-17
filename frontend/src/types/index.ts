@@ -43,6 +43,7 @@ export const ExpenseCategory = {
   UTILITIES: "utilities",
   LABOR: "labor",
   MAINTENANCE: "maintenance",
+  TAX: "tax",
   OTHER: "other"
 } as const;
 

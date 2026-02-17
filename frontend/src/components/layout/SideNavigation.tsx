@@ -21,7 +21,8 @@ import {
   Building20Regular,
   ShoppingBag20Regular,
   DocumentBulletList20Regular,
-  Video20Regular
+  Video20Regular,
+  ChatSparkle20Regular
 } from '@fluentui/react-icons';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -209,6 +210,11 @@ const SideNavigation: React.FC<SideNavigationProps> = ({ isOpen, onClose }) => {
       path: '/livestreams',
       label: 'Livestreams',
       icon: <Video20Regular />,
+    },
+    {
+      path: '/agent',
+      label: 'Ask AI Agent',
+      icon: <ChatSparkle20Regular />,
     },
   ];
 

@@ -16,6 +16,7 @@ class ExpenseCategory(enum.Enum):
     UTILITIES = "utilities"
     LABOR = "labor"
     MAINTENANCE = "maintenance"
+    TAX = "tax"
     OTHER = "other"
 
 

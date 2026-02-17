@@ -36,6 +36,7 @@ import LivestreamForm from './components/livestreams/LivestreamForm';
 import LivestreamViewer from './components/livestreams/LivestreamViewer';
 import UserManagement from './components/admin/UserManagement';
 import CustomerDashboard from './components/customer/CustomerDashboard';
+import AgentQuery from './components/agent/AgentQuery';
 import { RoleGuard } from './components/auth/RoleGuard';
 import { useAuth } from './contexts/AuthContext';
 import { createQueryClient, persisterOptions } from './lib/queryPersister';
@@ -367,6 +368,15 @@ const AppContent: React.FC = () => {
                       <Layout>
                         <ProfileView />
                       </Layout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/agent" element={
+                    <ProtectedRoute>
+                      <RoleGuard minRole="user">
+                        <Layout>
+                          <AgentQuery />
+                        </Layout>
+                      </RoleGuard>
                     </ProtectedRoute>
                   } />
                   <Route path="/admin/users" element={
