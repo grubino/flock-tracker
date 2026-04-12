@@ -26,7 +26,7 @@ const useStyles = makeStyles({
     marginBottom: tokens.spacingVerticalL,
     '@media (max-width: 768px)': {
       flexDirection: 'column',
-      alignItems: 'stretch',
+      alignItems: 'center',
       gap: tokens.spacingVerticalM,
     },
   },
@@ -101,8 +101,8 @@ const LocationList: React.FC = () => {
         <Text as="h1" size={800} weight="bold">
           Locations
         </Text>
-        <RouterLink to="/locations/new" style={{ textDecoration: 'none', flex: 1 }}>
-          <Button appearance="primary" style={{ width: '100%' }}>
+        <RouterLink to="/locations/new" style={{ textDecoration: 'none' }}>
+          <Button appearance="primary">
             Add Location
           </Button>
         </RouterLink>
