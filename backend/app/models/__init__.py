@@ -12,6 +12,7 @@ from .order import Order, OrderItem, OrderStatus
 from .care_schedule import CareSchedule, CareCompletion, CareType, RecurrenceType, ScheduleStatus, TaskStatus
 from .batch_receipt import BatchReceiptUpload, BatchReceiptItem, BatchStatus, BatchItemStatus
 from .livestream import Livestream
+from .necropsy_report import NecropsyReport
 
 __all__ = [
     "Animal", "AnimalType", "SheepGender",
@@ -27,5 +28,6 @@ __all__ = [
     "Order", "OrderItem", "OrderStatus",
     "CareSchedule", "CareCompletion", "CareType", "RecurrenceType", "ScheduleStatus", "TaskStatus",
     "BatchReceiptUpload", "BatchReceiptItem", "BatchStatus", "BatchItemStatus",
-    "Livestream"
+    "Livestream",
+    "NecropsyReport"
 ]

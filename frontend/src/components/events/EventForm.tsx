@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import {
@@ -15,10 +15,10 @@ import {
   tokens,
   Checkbox
 } from '@fluentui/react-components';
-import { Add20Regular, Dismiss20Regular } from '@fluentui/react-icons';
-import { eventsApi, animalsApi } from '../../services/api';
+import { Add20Regular, Dismiss20Regular, Document20Regular, ArrowDownload20Regular } from '@fluentui/react-icons';
+import { eventsApi, animalsApi, necropsyReportsApi } from '../../services/api';
 import { EventType, AnimalType, SheepGender } from '../../types';
-import type { EventCreateRequest, Event, AnimalCreateRequest } from '../../types';
+import type { EventCreateRequest, Event, AnimalCreateRequest, NecropsyReport } from '../../types';
 
 interface EventFormProps {
   event?: Event;
@@ -86,6 +86,22 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
     gap: tokens.spacingVerticalM,
   },
+  necropsySection: {
+    padding: tokens.spacingVerticalL,
+    backgroundColor: tokens.colorNeutralBackground1Hover,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  reportItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    marginBottom: tokens.spacingVerticalS,
+  },
 });
 
 const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false }) => {
@@ -111,6 +127,11 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
   const [eventDate, setEventDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Necropsy report state
+  const [pendingReportFiles, setPendingReportFiles] = useState<File[]>([]);
+  const [uploadedReports, setUploadedReports] = useState<NecropsyReport[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Lamb creation state
   const [createLambs, setCreateLambs] = useState(false);
@@ -152,9 +173,19 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
     return allAnimals.filter(animal => animal.on_farm);
   }, [allAnimals]);
 
+  const uploadReports = async (eventId: number) => {
+    for (const file of pendingReportFiles) {
+      await necropsyReportsApi.upload(eventId, file);
+    }
+    setPendingReportFiles([]);
+  };
+
   const createMutation = useMutation({
     mutationFn: (data: EventCreateRequest) => eventsApi.create(data),
-    onSuccess: () => {
+    onSuccess: async (response) => {
+      if (pendingReportFiles.length > 0) {
+        await uploadReports(response.data.id);
+      }
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['animals'] });
       // Navigate back to previous page if coming from animal detail
@@ -183,9 +214,13 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<EventCreateRequest>) =>
       eventsApi.update(event!.id, data),
-    onSuccess: () => {
+    onSuccess: async () => {
+      if (pendingReportFiles.length > 0) {
+        await uploadReports(event!.id);
+      }
       queryClient.invalidateQueries({ queryKey: ['events'] });
       queryClient.invalidateQueries({ queryKey: ['animals'] });
+      queryClient.invalidateQueries({ queryKey: ['necropsy-reports', eventId] });
       navigate('/events');
     },
   });
@@ -201,6 +236,23 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
   const isLambingEvent = useMemo(() => {
     return selectedEventTypes.includes(EventType.LAMBING);
   }, [selectedEventTypes]);
+
+  const isDeathEvent = useMemo(() => {
+    return selectedEventTypes.includes(EventType.DEATH);
+  }, [selectedEventTypes]);
+
+  // Fetch existing necropsy reports when editing a death event
+  const { data: existingReports } = useQuery({
+    queryKey: ['necropsy-reports', eventId],
+    queryFn: () => necropsyReportsApi.getByEvent(eventId!).then(res => res.data),
+    enabled: isEdit && !!eventId && isDeathEvent,
+  });
+
+  useEffect(() => {
+    if (existingReports) {
+      setUploadedReports(existingReports);
+    }
+  }, [existingReports]);
 
   // Helper functions for lamb management
   const addLamb = () => {
@@ -468,6 +520,88 @@ const EventForm: React.FC<EventFormProps> = ({ event: propEvent, isEdit = false 
               </Text>
             )}
           </div>
+
+          {/* Necropsy Reports Section - Only show for death events */}
+          {isDeathEvent && (
+            <div className={styles.necropsySection}>
+              <Text weight="semibold" size={400} style={{ display: 'block', marginBottom: tokens.spacingVerticalM }}>
+                Necropsy Reports
+              </Text>
+
+              {/* Existing uploaded reports (edit mode) */}
+              {uploadedReports.map(report => (
+                <div key={report.id} className={styles.reportItem}>
+                  <Document20Regular />
+                  <Text style={{ flex: 1 }}>{report.original_filename}</Text>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                    {(report.file_size / 1024).toFixed(0)} KB
+                  </Text>
+                  <Button
+                    appearance="subtle"
+                    icon={<ArrowDownload20Regular />}
+                    size="small"
+                    onClick={() => {
+                      necropsyReportsApi.download(report.id).then(res => {
+                        const url = URL.createObjectURL(res.data);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = report.original_filename;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                      });
+                    }}
+                  />
+                  <Button
+                    appearance="subtle"
+                    icon={<Dismiss20Regular />}
+                    size="small"
+                    onClick={async () => {
+                      await necropsyReportsApi.delete(report.id);
+                      setUploadedReports(prev => prev.filter(r => r.id !== report.id));
+                    }}
+                  />
+                </div>
+              ))}
+
+              {/* Pending files (not yet uploaded) */}
+              {pendingReportFiles.map((file, index) => (
+                <div key={index} className={styles.reportItem}>
+                  <Document20Regular />
+                  <Text style={{ flex: 1 }}>{file.name}</Text>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                    {(file.size / 1024).toFixed(0)} KB · pending
+                  </Text>
+                  <Button
+                    appearance="subtle"
+                    icon={<Dismiss20Regular />}
+                    size="small"
+                    onClick={() => setPendingReportFiles(prev => prev.filter((_, i) => i !== index))}
+                  />
+                </div>
+              ))}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/pdf"
+                multiple
+                style={{ display: 'none' }}
+                onChange={e => {
+                  const files = Array.from(e.target.files || []);
+                  setPendingReportFiles(prev => [...prev, ...files]);
+                  e.target.value = '';
+                }}
+              />
+              <Button
+                appearance="subtle"
+                icon={<Add20Regular />}
+                onClick={() => fileInputRef.current?.click()}
+                style={{ marginTop: tokens.spacingVerticalS }}
+              >
+                Add PDF
+              </Button>
+            </div>
+          )}
 
           {/* Lamb Creation Section - Only show for lambing events in create mode with single ewe */}
           {isLambingEvent && !isEdit && selectedAnimalIds.length === 1 && (

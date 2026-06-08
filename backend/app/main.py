@@ -14,7 +14,7 @@ from app.config import settings
 # Server startup timestamp for cache invalidation
 SERVER_START_TIME = datetime.now().isoformat()
 from app.database.database import create_tables, SessionLocal
-from app.routers import animals_router, events_router, expenses_router, locations_router, photographs_router, auth_router, admin_router, vendors_router, receipts_router, products_router, orders_router, care_schedules_router, livestreams_router, agent_router
+from app.routers import animals_router, events_router, expenses_router, locations_router, photographs_router, auth_router, admin_router, vendors_router, receipts_router, products_router, orders_router, care_schedules_router, livestreams_router, agent_router, necropsy_reports_router
 from app.models import *  # Import all models to ensure they're registered with SQLAlchemy
 from app.services.auth import create_admin_user
 
@@ -146,6 +146,7 @@ app.include_router(livestreams_router)
 app.include_router(products_router)
 app.include_router(orders_router)
 app.include_router(photographs_router)
+app.include_router(necropsy_reports_router)
 
 # API and health endpoints (before static file mounting)
 @app.get("/api", tags=["API Info"])

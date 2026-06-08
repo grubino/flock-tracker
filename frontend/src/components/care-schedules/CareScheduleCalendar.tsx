@@ -14,8 +14,9 @@ import {
   Label,
   Textarea
 } from '@fluentui/react-components';
-import { Checkmark24Regular, List24Regular } from '@fluentui/react-icons';
+import { Checkmark24Regular, List24Regular, CalendarAdd24Regular } from '@fluentui/react-icons';
 import { careSchedulesApi, careCompletionsApi, animalsApi } from '../../services/api';
+import { buildGoogleCalendarUrl } from '../../utils/googleCalendar';
 import { TaskStatus } from '../../types';
 import type { UpcomingTask, CareCompletionCreateRequest } from '../../types';
 
@@ -361,6 +362,18 @@ const CareScheduleCalendar: React.FC = () => {
                             View
                           </Button>
                         </RouterLink>
+                        <Button
+                          appearance="subtle"
+                          size="small"
+                          icon={<CalendarAdd24Regular />}
+                          as="a"
+                          href={buildGoogleCalendarUrl(task, getAnimalNames(task.animal_ids ?? []) ?? undefined)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ flex: 1 }}
+                        >
+                          Add to Google Calendar
+                        </Button>
                         <Button
                           appearance="primary"
                           size="small"

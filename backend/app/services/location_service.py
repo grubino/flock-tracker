@@ -1,9 +1,13 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import exists
 from typing import List, Optional
 from fastapi import HTTPException
 from app.models import Location, Animal
+from app.models.event import Event, EventType
 from app.schemas import LocationCreate, LocationUpdate
+
+DEPARTURE_EVENT_TYPES = [EventType.DEATH, EventType.SLAUGHTER, EventType.SOLD]
 
 
 class LocationService:
@@ -77,10 +81,16 @@ class LocationService:
         return True
 
     def get_animals_at_location(self, location_id: int) -> List[Animal]:
-        """Get all animals currently at a specific location"""
+        """Get all animals currently at a specific location, excluding departed animals"""
         return (
             self.db.query(Animal)
             .filter(Animal.current_location_id == location_id)
+            .filter(
+                ~exists().where(
+                    (Event.animal_id == Animal.id) &
+                    (Event.event_type.in_(DEPARTURE_EVENT_TYPES))
+                )
+            )
             .all()
         )
 

@@ -16,7 +16,7 @@ import {
   type SelectTabEvent
 } from '@fluentui/react-components';
 import { Search20Regular, Dismiss20Regular } from '@fluentui/react-icons';
-import { animalsApi, productsApi } from '../../services/api';
+import { animalsApi, productsApi, getServerUrl } from '../../services/api';
 import { AnimalType, ProductCategory } from '../../types';
 import { formatDateWithoutTimezone } from '../../utils/dateUtils';
 import type { Animal, Product } from '../../types';
@@ -303,8 +303,6 @@ const CustomerDashboard: React.FC = () => {
             {filteredAnimals.map((animal: Animal) => {
               const photographs = animal.photographs || [];
               const primaryPhoto = photographs.find(p => p.is_primary) || photographs[0];
-              const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
               return (
                 <Card key={animal.id} className={styles.card}>
                   <RouterLink
@@ -313,7 +311,7 @@ const CustomerDashboard: React.FC = () => {
                   >
                     {primaryPhoto && (
                       <img
-                        src={`${API_BASE_URL}/api/photographs/${primaryPhoto.id}/file`}
+                        src={`${getServerUrl()}/api/photographs/${primaryPhoto.id}/file`}
                         alt={animal.name || animal.tag_number}
                         style={{
                           width: '100%',

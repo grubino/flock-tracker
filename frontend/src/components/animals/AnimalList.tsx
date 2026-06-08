@@ -20,16 +20,10 @@ import {
   type SelectTabEvent
 } from '@fluentui/react-components';
 import { Dismiss24Regular } from '@fluentui/react-icons';
-import { animalsApi, locationsApi, eventsApi } from '../../services/api';
+import { animalsApi, locationsApi, eventsApi, getServerUrl } from '../../services/api';
 import { AnimalType, SheepGender, ChickenGender, EventType } from '../../types';
 import type { Animal } from '../../types';
 import { formatDateWithoutTimezone, parseDateWithoutTimezone } from '../../utils/dateUtils';
-
-// Get server URL from localStorage or fall back to environment variable
-const getServerUrl = (): string => {
-  const storedUrl = localStorage.getItem('server_url');
-  return storedUrl || import.meta.env.VITE_API_URL || '';
-};
 
 const useStyles = makeStyles({
   container: {

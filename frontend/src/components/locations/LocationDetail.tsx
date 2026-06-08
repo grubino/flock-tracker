@@ -5,6 +5,7 @@ import {
   Card,
   Text,
   Button,
+  Badge,
   makeStyles,
   tokens,
   Spinner,
@@ -13,6 +14,7 @@ import {
   Location24Regular,
   Edit24Regular,
   ArrowLeft24Regular,
+  AnimalPawPrint24Regular,
 } from '@fluentui/react-icons';
 import { locationsApi } from '../../services/api';
 
@@ -68,6 +70,16 @@ const useStyles = makeStyles({
     textAlign: 'center',
     padding: tokens.spacingVerticalXXL,
   },
+  animalRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: tokens.spacingHorizontalS,
+    padding: `${tokens.spacingVerticalS} 0`,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    textDecoration: 'none',
+    color: 'inherit',
+    ':last-child': { borderBottom: 'none' },
+  },
 });
 
 const LocationDetail: React.FC = () => {
@@ -78,6 +90,12 @@ const LocationDetail: React.FC = () => {
   const { data: location, isLoading, error } = useQuery({
     queryKey: ['location', locationId],
     queryFn: () => locationsApi.getById(locationId).then(res => res.data),
+    enabled: !!locationId,
+  });
+
+  const { data: animals } = useQuery({
+    queryKey: ['location-animals', locationId],
+    queryFn: () => locationsApi.getAnimals(locationId).then(res => res.data),
     enabled: !!locationId,
   });
 
@@ -176,6 +194,32 @@ const LocationDetail: React.FC = () => {
                 {location.latitude}, {location.longitude}
               </Text>
             </div>
+          )}
+        </div>
+
+        <div className={styles.section}>
+          <Text as="h2" size={600} weight="semibold" style={{ marginBottom: '16px' }}>
+            Animals at this Location ({animals?.length ?? 0})
+          </Text>
+          {animals && animals.length > 0 ? (
+            animals.map(animal => (
+              <RouterLink
+                key={animal.id}
+                to={`/animals/${animal.id}`}
+                className={styles.animalRow}
+              >
+                <AnimalPawPrint24Regular />
+                <Text weight="semibold">{animal.name || animal.tag_number}</Text>
+                {animal.name && (
+                  <Text style={{ color: tokens.colorNeutralForeground3 }}>#{animal.tag_number}</Text>
+                )}
+                <Badge appearance="outline" style={{ marginLeft: 'auto' }}>
+                  {animal.animal_type}
+                </Badge>
+              </RouterLink>
+            ))
+          ) : (
+            <Text style={{ color: tokens.colorNeutralForeground3 }}>No animals currently at this location.</Text>
           )}
         </div>
 

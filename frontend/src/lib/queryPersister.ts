@@ -5,7 +5,7 @@ import { capacitorStorage } from './capacitorStorage';
 /**
  * Cache duration: 7 days in milliseconds
  */
-export const CACHE_TIME = 7 * 24 * 60 * 60 * 1000; // 604,800,000ms (7 days)
+export const CACHE_TIME = 5 * 60 * 1000; // 604,800,000ms (7 days)
 
 /**
  * Garbage collection time: 8 days (cache time + 1 day buffer)
@@ -38,7 +38,7 @@ export const createQueryClient = () => {
 
         // Persist queries that succeed
         // Note: Queries with errors are not persisted
-        networkMode: 'offlineFirst',
+        networkMode: 'online',
       },
       mutations: {
         // Mutations will fail immediately when offline

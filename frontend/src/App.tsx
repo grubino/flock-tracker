@@ -31,6 +31,7 @@ import ProfileView from './components/profile/ProfileView';
 import CareScheduleList from './components/care-schedules/CareScheduleList';
 import CareScheduleForm from './components/care-schedules/CareScheduleForm';
 import CareScheduleCalendar from './components/care-schedules/CareScheduleCalendar';
+import CareScheduleDetail from './components/care-schedules/CareScheduleDetail';
 import LivestreamList from './components/livestreams/LivestreamList';
 import LivestreamForm from './components/livestreams/LivestreamForm';
 import LivestreamViewer from './components/livestreams/LivestreamViewer';
@@ -313,7 +314,7 @@ const AppContent: React.FC = () => {
                     <ProtectedRoute>
                       <RoleGuard minRole="user">
                         <Layout>
-                          <CareScheduleList />
+                          <CareScheduleDetail />
                         </Layout>
                       </RoleGuard>
                     </ProtectedRoute>

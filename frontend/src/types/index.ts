@@ -111,6 +111,15 @@ export type RecurrenceType = typeof RecurrenceType[keyof typeof RecurrenceType];
 export type ScheduleStatus = typeof ScheduleStatus[keyof typeof ScheduleStatus];
 export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
 
+export interface NecropsyReport {
+  id: number;
+  event_id: number;
+  original_filename: string;
+  file_size: number;
+  notes?: string;
+  created_at: string;
+}
+
 export interface Photograph {
   id: number;
   filename: string;

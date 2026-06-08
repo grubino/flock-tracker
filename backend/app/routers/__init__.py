@@ -12,6 +12,7 @@ from .orders import router as orders_router
 from .care_schedules import router as care_schedules_router
 from .livestreams import router as livestreams_router
 from .agent import router as agent_router
+from .necropsy_reports import router as necropsy_reports_router
 
 __all__ = [
     "animals_router",
@@ -27,5 +28,6 @@ __all__ = [
     "orders_router",
     "care_schedules_router",
     "livestreams_router",
-    "agent_router"
+    "agent_router",
+    "necropsy_reports_router"
 ]

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   Text,
@@ -13,7 +13,7 @@ import {
   Option,
   Label
 } from '@fluentui/react-components';
-import { Dismiss24Regular, CalendarLtr24Regular } from '@fluentui/react-icons';
+import { Dismiss24Regular, CalendarLtr24Regular, Delete24Regular } from '@fluentui/react-icons';
 import { careSchedulesApi, animalsApi, locationsApi } from '../../services/api';
 import { CareType, ScheduleStatus } from '../../types';
 import type { CareSchedule } from '../../types';
@@ -181,6 +181,21 @@ const CareScheduleList: React.FC = () => {
     queryKey: ['locations'],
     queryFn: () => locationsApi.getAll().then(res => res.data),
   });
+
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => careSchedulesApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['care-schedules'] });
+      queryClient.invalidateQueries({ queryKey: ['care-schedules-summary'] });
+    },
+  });
+
+  const handleDelete = (id: number, title: string) => {
+    if (window.confirm(`Delete "${title}"? This cannot be undone.`)) {
+      deleteMutation.mutate(id);
+    }
+  };
 
   const clearFilters = () => {
     setSelectedCareType('');
@@ -458,6 +473,14 @@ const CareScheduleList: React.FC = () => {
                       Edit
                     </Button>
                   </RouterLink>
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    icon={<Delete24Regular />}
+                    onClick={() => handleDelete(schedule.id, schedule.title)}
+                    disabled={deleteMutation.isPending}
+                    style={{ color: tokens.colorPaletteRedForeground1 }}
+                  />
                 </div>
               </div>
             </Card>

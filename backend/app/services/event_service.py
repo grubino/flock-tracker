@@ -76,6 +76,8 @@ class EventService:
             .all()
         )
 
+    DEPARTURE_TYPES = {EventType.DEATH, EventType.SLAUGHTER, EventType.SOLD}
+
     def create_event(self, event: EventCreate) -> Event:
         """Create a new event"""
         try:
@@ -83,6 +85,9 @@ class EventService:
             animal = self.db.query(Animal).filter(Animal.id == event.animal_id).first()
             if not animal:
                 raise HTTPException(status_code=400, detail="Animal not found")
+
+            if event.event_type in self.DEPARTURE_TYPES and animal.current_location_id is not None:
+                animal.current_location_id = None
 
             db_event = Event(**event.model_dump())
             self.db.add(db_event)
@@ -146,6 +151,12 @@ class EventService:
                 animal = self.db.query(Animal).filter(Animal.id == update_data["animal_id"]).first()
                 if not animal:
                     raise HTTPException(status_code=400, detail="Animal not found")
+            else:
+                animal = self.db.query(Animal).filter(Animal.id == db_event.animal_id).first()
+
+            new_type = update_data.get("event_type", db_event.event_type)
+            if new_type in self.DEPARTURE_TYPES and animal and animal.current_location_id is not None:
+                animal.current_location_id = None
 
             for field, value in update_data.items():
                 setattr(db_event, field, value)

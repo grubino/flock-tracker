@@ -26,12 +26,8 @@ import {
 import { useGetAnimalPhotographsApiPhotographsAnimalAnimalIdGet, useSetPrimaryPhotographApiPhotographsPhotographIdSetPrimaryPost, useDeletePhotographApiPhotographsPhotographIdDelete } from '../generated/api';
 import type { Photograph } from '../generated/models';
 import { PhotoUpload } from './PhotoUpload';
+import { getServerUrl } from '../services/api';
 
-// Get server URL from localStorage or fall back to environment variable
-const getServerUrl = (): string => {
-  const storedUrl = localStorage.getItem('server_url');
-  return storedUrl || import.meta.env.VITE_API_URL || '';
-};
 
 const useStyles = makeStyles({
   container: {
@@ -125,20 +121,18 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload 
 
   const { data: photographs, isLoading } = useGetAnimalPhotographsApiPhotographsAnimalAnimalIdGet(animalId);
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: ['api', 'photographs', 'animal', animalId] });
+    queryClient.invalidateQueries({ queryKey: ['animals'] });
+    queryClient.invalidateQueries({ queryKey: ['animal', animalId] });
+  };
+
   const setPrimaryMutation = useSetPrimaryPhotographApiPhotographsPhotographIdSetPrimaryPost({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['api', 'photographs', 'animal', animalId] });
-      },
-    },
+    mutation: { onSuccess: invalidateAll },
   });
 
   const deleteMutation = useDeletePhotographApiPhotographsPhotographIdDelete({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['api', 'photographs', 'animal', animalId] });
-      },
-    },
+    mutation: { onSuccess: invalidateAll },
   });
 
   const handleSetPrimary = (photographId: number) => {
@@ -152,7 +146,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({ animalId, canUpload 
   };
 
   const handleUploadComplete = () => {
-    queryClient.invalidateQueries({ queryKey: ['api', 'photographs', 'animal', animalId] });
+    invalidateAll();
     setShowUpload(false);
   };
 

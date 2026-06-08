@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary, BatchReceiptUpload, BatchReceiptStatus, Livestream, LivestreamCreateRequest } from '../types';
+import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary, BatchReceiptUpload, BatchReceiptStatus, Livestream, LivestreamCreateRequest, NecropsyReport } from '../types';
 import { offlineQueue } from './offlineQueue';
 
 interface QueuedError extends Error {
@@ -8,9 +8,9 @@ interface QueuedError extends Error {
 }
 
 // Get server URL from localStorage or fall back to environment variable
-const getServerUrl = (): string => {
+export const getServerUrl = (): string => {
   const storedUrl = localStorage.getItem('server_url');
-  return storedUrl || import.meta.env.VITE_API_URL || '';
+  return storedUrl || import.meta.env.VITE_API_URL || 'http://localhost:8000';
 };
 
 const api = axios.create({
@@ -159,6 +159,7 @@ export const locationsApi = {
   getAll: () => api.get<Location[]>('/api/locations'),
   getById: (id: number) => api.get<Location>(`/api/locations/${id}`),
   getByAnimal: (animalId: number) => api.get<AnimalLocation[]>(`/api/locations/animal/${animalId}`),
+  getAnimals: (id: number) => api.get<Animal[]>(`/api/locations/${id}/animals`),
   create: (location: LocationCreateRequest) => api.post<Location>('/api/locations', location),
   update: (id: number, location: Partial<LocationCreateRequest>) => api.put<Location>(`/api/locations/${id}`, location),
   delete: (id: number) => api.delete(`/api/locations/${id}`),
@@ -305,6 +306,20 @@ export const livestreamsApi = {
   create: (livestream: LivestreamCreateRequest) => api.post<Livestream>('/api/livestreams', livestream),
   update: (id: number, livestream: Partial<LivestreamCreateRequest>) => api.put<Livestream>(`/api/livestreams/${id}`, livestream),
   delete: (id: number) => api.delete(`/api/livestreams/${id}`),
+};
+
+export const necropsyReportsApi = {
+  getByEvent: (eventId: number) => api.get<NecropsyReport[]>(`/api/necropsy-reports/event/${eventId}`),
+  upload: (eventId: number, file: File, notes?: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (notes) formData.append('notes', notes);
+    return api.post<NecropsyReport>(`/api/necropsy-reports/upload/${eventId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  download: (reportId: number) => api.get(`/api/necropsy-reports/${reportId}/file`, { responseType: 'blob' }),
+  delete: (reportId: number) => api.delete(`/api/necropsy-reports/${reportId}`),
 };
 
 export default api;
