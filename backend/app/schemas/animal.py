@@ -1,7 +1,25 @@
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime, date
 from app.models.animal import AnimalType, SheepGender
+
+
+class BreedComponent(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: Optional[int] = None
+    breed_name: str
+    percentage: Optional[float] = None  # 0-100; None means unknown proportion
+
+
+class BreedComponentCreate(BaseModel):
+    breed_name: str
+    percentage: Optional[float] = None
+
+
+class EffectiveBreedComponent(BaseModel):
+    breed_name: str
+    percentage: Optional[float] = None
+    source: Literal["direct", "inherited"]
 
 
 class AnimalBase(BaseModel):
@@ -87,3 +105,5 @@ class AnimalWithDetails(Animal):
     sire: Optional[AnimalBrief] = None
     dam: Optional[AnimalBrief] = None
     photographs: List[PhotographBrief] = []
+    breed_components: List[BreedComponent] = []
+    effective_breed_components: List[EffectiveBreedComponent] = []

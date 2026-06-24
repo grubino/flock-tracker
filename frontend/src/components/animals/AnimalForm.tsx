@@ -12,15 +12,23 @@ import {
   makeStyles,
   tokens
 } from '@fluentui/react-components';
+import { Add20Regular, Dismiss20Regular } from '@fluentui/react-icons';
 import { animalsApi, locationsApi } from '../../services/api';
 import { AnimalType, SheepGender, ChickenGender } from '../../types';
-import type { AnimalCreateRequest, Animal } from '../../types';
+import type { AnimalCreateRequest, Animal, BreedComponent, EffectiveBreedComponent } from '../../types';
 import { PhotoGallery } from '../PhotoGallery';
 import { useRoleAccess } from '../../hooks/useRoleAccess';
 
 interface AnimalFormProps {
   animal?: Animal;
   isEdit?: boolean;
+}
+
+interface BreedRow {
+  breed_name: string;
+  percentage: number | undefined;
+  inherited: boolean;   // came from ancestor computation, not DB
+  pct_locked: boolean;  // percentage is computed from complete ancestry — fully read-only
 }
 
 const useStyles = makeStyles({
@@ -49,6 +57,19 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
     marginTop: tokens.spacingVerticalL,
   },
+  breedSection: {
+    padding: tokens.spacingVerticalL,
+    backgroundColor: tokens.colorNeutralBackground1Hover,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  breedRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 120px auto',
+    gap: tokens.spacingHorizontalS,
+    alignItems: 'end',
+    marginBottom: tokens.spacingVerticalS,
+  },
 });
 
 const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
@@ -66,6 +87,24 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
   });
 
   const currentAnimal = animal || fetchedAnimal;
+
+  const [breeds, setBreeds] = useState<BreedRow[]>([]);
+
+  const addBreed = () => setBreeds(prev => [...prev, { breed_name: '', percentage: undefined, inherited: false, pct_locked: false }]);
+  const removeBreed = (i: number) => {
+    if (breeds[i].inherited) return;
+    setBreeds(prev => prev.filter((_, idx) => idx !== i));
+  };
+  const updateBreedName = (i: number, value: string) => {
+    if (breeds[i].inherited) return;
+    setBreeds(prev => prev.map((b, idx) => idx === i ? { ...b, breed_name: value } : b));
+  };
+  const updateBreedPct = (i: number, value: string) => {
+    if (breeds[i].pct_locked) return;
+    setBreeds(prev => prev.map((b, idx) =>
+      idx === i ? { ...b, percentage: value === '' ? undefined : parseFloat(value) } : b
+    ));
+  };
 
   const [formData, setFormData] = useState<AnimalCreateRequest>({
     name: '',
@@ -92,6 +131,17 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
         sire_id: currentAnimal.sire_id || undefined,
         dam_id: currentAnimal.dam_id || undefined,
       });
+      const effective = currentAnimal.effective_breed_components;
+      if (effective && effective.length > 0) {
+        setBreeds(effective.map((bc: EffectiveBreedComponent) => ({
+          breed_name: bc.breed_name,
+          percentage: bc.percentage ?? undefined,
+          inherited: bc.source === 'inherited',
+          pct_locked: bc.source === 'inherited' && bc.percentage != null,
+        })));
+      } else {
+        setBreeds([]);
+      }
     }
   }, [currentAnimal]);
 
@@ -105,9 +155,24 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
     queryFn: () => locationsApi.getAll().then(res => res.data),
   });
 
+  // Only save non-locked breeds: user-entered + inherited where user explicitly set a percentage
+  const breedsToSave: Omit<BreedComponent, 'id'>[] = breeds
+    .filter(b => !b.pct_locked && b.breed_name.trim() !== '')
+    .filter(b => !b.inherited || b.percentage != null)
+    .map(({ breed_name, percentage }) => ({ breed_name, percentage }));
+
+  // Percentage validation: if every named editable breed has a percentage, they must sum to 100
+  const editableNamed = breeds.filter(b => !b.pct_locked && b.breed_name.trim() !== '');
+  const allHavePct = editableNamed.length > 0 && editableNamed.every(b => b.percentage != null);
+  const pctSum = editableNamed.reduce((s, b) => s + (b.percentage ?? 0), 0);
+  const pctSumError = allHavePct && Math.abs(pctSum - 100) > 0.5;
+
   const createMutation = useMutation({
     mutationFn: (data: AnimalCreateRequest) => animalsApi.create(data),
-    onSuccess: () => {
+    onSuccess: async (res) => {
+      if (breedsToSave.length > 0) {
+        await animalsApi.updateBreeds(res.data.id, breedsToSave);
+      }
       queryClient.invalidateQueries({ queryKey: ['animals'] });
       navigate('/animals');
     },
@@ -116,7 +181,8 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
   const updateMutation = useMutation({
     mutationFn: (data: Partial<AnimalCreateRequest>) =>
       animalsApi.update(currentAnimal!.id, data),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await animalsApi.updateBreeds(currentAnimal!.id, breedsToSave);
       queryClient.invalidateQueries({ queryKey: ['animals'] });
       queryClient.invalidateQueries({ queryKey: ['animal', animalId] });
       navigate('/animals');
@@ -125,6 +191,7 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (pctSumError) return;
     const submitData = {
       ...formData,
       birth_date: formData.birth_date || undefined,
@@ -359,6 +426,86 @@ const AnimalForm: React.FC<AnimalFormProps> = ({ animal, isEdit = false }) => {
               </Dropdown>
             </div>
             </div>
+          </div>
+
+          {/* Breed Section */}
+          <div className={styles.breedSection}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: tokens.spacingVerticalM }}>
+              <Text weight="semibold" size={400}>Breed</Text>
+              <Button appearance="subtle" icon={<Add20Regular />} size="small" onClick={addBreed}>
+                Add Breed
+              </Button>
+            </div>
+
+            {breeds.length === 0 && (
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>
+                No breeds set — will be inherited from parents if known.
+              </Text>
+            )}
+
+            {breeds.some(b => b.inherited) && (
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3, display: 'block', marginBottom: tokens.spacingVerticalS }}>
+                Inherited from parents. Adding a breed below will override the inherited calculation.
+              </Text>
+            )}
+
+            {breeds.map((breed, i) => (
+              <div key={i} className={styles.breedRow}>
+                <div className={styles.field}>
+                  <Label>Breed Name</Label>
+                  {breed.inherited ? (
+                    <Text style={{ padding: '6px 0', display: 'block', fontStyle: 'italic' }}>
+                      {breed.breed_name}
+                    </Text>
+                  ) : (
+                    <Input
+                      value={breed.breed_name}
+                      onChange={(_, d) => updateBreedName(i, d.value)}
+                      placeholder="e.g. Merino"
+                    />
+                  )}
+                </div>
+                <div className={styles.field}>
+                  <Label>%{breed.pct_locked ? '' : ' (optional)'}</Label>
+                  {breed.pct_locked ? (
+                    <Text style={{ padding: '6px 0', display: 'block' }}>
+                      {breed.percentage?.toFixed(1)}%
+                    </Text>
+                  ) : (
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={breed.percentage?.toString() ?? ''}
+                      onChange={(_, d) => updateBreedPct(i, d.value)}
+                      placeholder={breed.inherited ? 'unknown' : '50'}
+                    />
+                  )}
+                </div>
+                {breed.inherited ? (
+                  <div style={{ width: '32px' }} />
+                ) : (
+                  <Button
+                    appearance="subtle"
+                    icon={<Dismiss20Regular />}
+                    onClick={() => removeBreed(i)}
+                    style={{ marginBottom: '2px' }}
+                  />
+                )}
+              </div>
+            ))}
+
+            {pctSumError && (
+              <Text size={200} style={{ color: tokens.colorPaletteRedForeground1, marginTop: tokens.spacingVerticalS, display: 'block' }}>
+                Percentages must sum to 100 (currently {pctSum.toFixed(1)}%).
+              </Text>
+            )}
+
+            {allHavePct && !pctSumError && editableNamed.length > 0 && (
+              <Text size={200} style={{ color: tokens.colorPaletteGreenForeground1, marginTop: tokens.spacingVerticalS, display: 'block' }}>
+                Percentages sum to 100%.
+              </Text>
+            )}
           </div>
 
           <div className={styles.actions}>

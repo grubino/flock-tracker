@@ -2,9 +2,63 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.exc import IntegrityError
 from typing import List, Optional
 from fastapi import HTTPException
-from app.models import Animal, AnimalType, SheepGender, Location
+from app.models import Animal, AnimalType, SheepGender, Location, AnimalBreedComponent
 from app.models.user import User, UserRole
 from app.schemas import AnimalCreate, AnimalUpdate
+from app.schemas.animal import BreedComponentCreate, EffectiveBreedComponent
+
+
+def _breeds_complete(breeds: List[EffectiveBreedComponent]) -> bool:
+    """True if every breed has a known percentage and they sum to ~100."""
+    return (
+        bool(breeds)
+        and all(b.percentage is not None for b in breeds)
+        and abs(sum(b.percentage for b in breeds) - 100.0) < 0.5
+    )
+
+
+def compute_effective_breeds(animal: Animal, visited: set = None, depth: int = 0) -> List[EffectiveBreedComponent]:
+    """Recursively compute breed composition, inheriting from ancestors when not explicitly set.
+
+    Percentages are only calculated when BOTH parents have complete breed info (all percentages
+    known and summing to 100). Otherwise, breed names are inherited without percentages.
+    """
+    if visited is None:
+        visited = set()
+    if animal is None or animal.id in visited or depth > 6:
+        return []
+    visited.add(animal.id)
+
+    if animal.breed_components:
+        return [
+            EffectiveBreedComponent(breed_name=bc.breed_name, percentage=bc.percentage, source="direct")
+            for bc in animal.breed_components
+        ]
+
+    sire_breeds = compute_effective_breeds(animal.sire, visited, depth + 1) if animal.sire else []
+    dam_breeds = compute_effective_breeds(animal.dam, visited, depth + 1) if animal.dam else []
+
+    if not sire_breeds and not dam_breeds:
+        return []
+
+    if _breeds_complete(sire_breeds) and _breeds_complete(dam_breeds):
+        combined: dict = {}
+        for bc in sire_breeds:
+            combined[bc.breed_name] = combined.get(bc.breed_name, 0.0) + bc.percentage / 2.0
+        for bc in dam_breeds:
+            combined[bc.breed_name] = combined.get(bc.breed_name, 0.0) + bc.percentage / 2.0
+        return [
+            EffectiveBreedComponent(breed_name=name, percentage=round(pct, 1), source="inherited")
+            for name, pct in combined.items()
+        ]
+    else:
+        seen: dict = {}
+        for bc in sire_breeds + dam_breeds:
+            seen[bc.breed_name] = None
+        return [
+            EffectiveBreedComponent(breed_name=name, percentage=None, source="inherited")
+            for name in seen
+        ]
 
 
 class AnimalService:
@@ -28,8 +82,9 @@ class AnimalService:
         """
         query = self.db.query(Animal).options(
             joinedload(Animal.current_location),
-            joinedload(Animal.sire),
-            joinedload(Animal.dam),
+            joinedload(Animal.breed_components),
+            joinedload(Animal.sire).joinedload(Animal.breed_components),
+            joinedload(Animal.dam).joinedload(Animal.breed_components),
             joinedload(Animal.photographs),
             joinedload(Animal.events)  # Need events to compute on_farm property
         )
@@ -64,8 +119,9 @@ class AnimalService:
             self.db.query(Animal)
             .options(
                 joinedload(Animal.events),
-                joinedload(Animal.sire),
-                joinedload(Animal.dam),
+                joinedload(Animal.breed_components),
+                joinedload(Animal.sire).joinedload(Animal.breed_components),
+                joinedload(Animal.dam).joinedload(Animal.breed_components),
                 joinedload(Animal.current_location),
                 joinedload(Animal.sired_offspring),
                 joinedload(Animal.dam_offspring)

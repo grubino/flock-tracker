@@ -130,6 +130,18 @@ export interface Photograph {
   height?: number;
 }
 
+export interface BreedComponent {
+  id?: number;
+  breed_name: string;
+  percentage?: number;
+}
+
+export interface EffectiveBreedComponent {
+  breed_name: string;
+  percentage?: number;
+  source: 'direct' | 'inherited';
+}
+
 export interface Animal {
   id: number;
   name?: string;
@@ -148,6 +160,8 @@ export interface Animal {
   sire?: Animal;
   dam?: Animal;
   photographs?: Photograph[];
+  breed_components?: BreedComponent[];
+  effective_breed_components?: EffectiveBreedComponent[];
 }
 
 export interface Event {

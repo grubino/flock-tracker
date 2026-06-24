@@ -303,6 +303,37 @@ const AnimalDetail: React.FC = () => {
         </div>
       </Card>
 
+      {/* Breed Section */}
+      {animal.effective_breed_components && animal.effective_breed_components.length > 0 && (
+        <Card className={styles.card} style={{ marginTop: tokens.spacingVerticalXL }}>
+          <Text as="h2" size={600} weight="semibold" style={{ marginBottom: tokens.spacingVerticalM }}>
+            Breed
+            {animal.effective_breed_components[0]?.source === 'inherited' && (
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginLeft: tokens.spacingHorizontalS }}>
+                (inherited from ancestors)
+              </Text>
+            )}
+          </Text>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: tokens.spacingHorizontalS }}>
+            {animal.effective_breed_components.map((bc, i) => (
+              <div key={i} style={{
+                padding: `${tokens.spacingVerticalXS} ${tokens.spacingHorizontalM}`,
+                backgroundColor: tokens.colorNeutralBackground2,
+                borderRadius: tokens.borderRadiusMedium,
+                border: `1px solid ${tokens.colorNeutralStroke1}`,
+              }}>
+                <Text weight="semibold">{bc.breed_name}</Text>
+                {bc.percentage != null && (
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginLeft: tokens.spacingHorizontalXS }}>
+                    {bc.percentage}%
+                  </Text>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Events Section */}
       <Card className={styles.card} style={{ marginTop: tokens.spacingVerticalXL }}>
         <div className={styles.header}>

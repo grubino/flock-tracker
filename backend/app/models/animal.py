@@ -45,6 +45,7 @@ class Animal(Base):
     events = relationship("Event", back_populates="animal", cascade="all, delete-orphan")
     photographs = relationship("Photograph", back_populates="animal", cascade="all, delete-orphan")
     care_schedules = relationship("CareSchedule", secondary="care_schedule_animals", back_populates="animals")
+    breed_components = relationship("AnimalBreedComponent", back_populates="animal", cascade="all, delete-orphan")
 
     @property
     def on_farm(self) -> bool:

@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary, BatchReceiptUpload, BatchReceiptStatus, Livestream, LivestreamCreateRequest, NecropsyReport } from '../types';
+import type { Animal, Event, Location, AnimalLocation, AnimalCreateRequest, EventCreateRequest, LocationCreateRequest, Expense, ExpenseCreateRequest, Vendor, VendorCreateRequest, Receipt, OCRResult, Product, ProductCreateRequest, CareSchedule, CareScheduleCreateRequest, CareCompletion, CareCompletionCreateRequest, UpcomingTask, TaskSummary, BatchReceiptUpload, BatchReceiptStatus, Livestream, LivestreamCreateRequest, NecropsyReport, BreedComponent } from '../types';
 import { offlineQueue } from './offlineQueue';
 
 interface QueuedError extends Error {
@@ -123,6 +123,8 @@ export const animalsApi = {
   },
   update: (id: number, animal: Partial<AnimalCreateRequest>) => api.put<Animal>(`/api/animals/${id}`, animal),
   delete: (id: number) => api.delete(`/api/animals/${id}`),
+  updateBreeds: (id: number, breeds: Omit<BreedComponent, 'id'>[]) =>
+    api.put<BreedComponent[]>(`/api/animals/${id}/breeds`, breeds),
 };
 
 export const eventsApi = {

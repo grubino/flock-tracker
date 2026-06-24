@@ -6,10 +6,18 @@ import csv
 import io
 from app.database.database import get_db
 from app.schemas import Animal, AnimalCreate, AnimalUpdate, AnimalWithDetails, AnimalWithLocation
-from app.services.animal_service import AnimalService
+from app.schemas.animal import BreedComponent, BreedComponentCreate
+from app.services.animal_service import AnimalService, compute_effective_breeds
 from app.models.animal import AnimalType, SheepGender
+from app.models.animal_breed import AnimalBreedComponent
 from app.services.auth import get_current_active_user, require_admin, require_user
 from app.models.user import User
+
+
+def _with_breeds(animal) -> AnimalWithDetails:
+    data = AnimalWithDetails.model_validate(animal)
+    data.effective_breed_components = compute_effective_breeds(animal)
+    return data
 
 router = APIRouter(prefix="/animals", tags=["animals"])
 
@@ -34,7 +42,7 @@ def read_animals(
         current_user=current_user,
         on_farm=on_farm
     )
-    return animals
+    return [_with_breeds(a) for a in animals]
 
 
 @router.post("", response_model=Animal)
@@ -84,7 +92,7 @@ def read_animal(animal_id: int, db: Session = Depends(get_db)):
     animal = service.get_animal_with_details(animal_id)
     if animal is None:
         raise HTTPException(status_code=404, detail="Animal not found")
-    return animal
+    return _with_breeds(animal)
 
 
 @router.put("/{animal_id}", response_model=Animal)
@@ -100,6 +108,32 @@ def update_animal(
     if updated_animal is None:
         raise HTTPException(status_code=404, detail="Animal not found")
     return updated_animal
+
+
+@router.put("/{animal_id}/breeds", response_model=List[BreedComponent])
+def update_animal_breeds(
+    animal_id: int,
+    breeds: List[BreedComponentCreate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_user)
+):
+    """Replace all breed components for an animal"""
+    animal = db.query(AnimalBreedComponent).filter(AnimalBreedComponent.animal_id == animal_id).first()
+    # Verify animal exists
+    from app.models.animal import Animal as AnimalModel
+    if not db.query(AnimalModel).filter(AnimalModel.id == animal_id).first():
+        raise HTTPException(status_code=404, detail="Animal not found")
+
+    db.query(AnimalBreedComponent).filter(AnimalBreedComponent.animal_id == animal_id).delete()
+    new_components = [
+        AnimalBreedComponent(animal_id=animal_id, breed_name=b.breed_name, percentage=b.percentage)
+        for b in breeds
+    ]
+    db.add_all(new_components)
+    db.commit()
+    for c in new_components:
+        db.refresh(c)
+    return new_components
 
 
 @router.delete("/{animal_id}")

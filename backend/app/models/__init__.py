@@ -13,6 +13,7 @@ from .care_schedule import CareSchedule, CareCompletion, CareType, RecurrenceTyp
 from .batch_receipt import BatchReceiptUpload, BatchReceiptItem, BatchStatus, BatchItemStatus
 from .livestream import Livestream
 from .necropsy_report import NecropsyReport
+from .animal_breed import AnimalBreedComponent
 
 __all__ = [
     "Animal", "AnimalType", "SheepGender",
@@ -29,5 +30,6 @@ __all__ = [
     "CareSchedule", "CareCompletion", "CareType", "RecurrenceType", "ScheduleStatus", "TaskStatus",
     "BatchReceiptUpload", "BatchReceiptItem", "BatchStatus", "BatchItemStatus",
     "Livestream",
-    "NecropsyReport"
+    "NecropsyReport",
+    "AnimalBreedComponent"
 ]
